@@ -4,6 +4,7 @@ import { metaAuthUrl, tiktokAuthUrl } from "../../lib/providers.js";
 // GET /api/connect/meta  |  /api/connect/tiktok  → manda al login oficial de la red
 export default function handler(req, res) {
   if (!isAuthed(req)) return redirect(res, `${appUrl()}/`);
+  if (!process.env.APP_URL) process.env.APP_URL = `https://${req.headers["x-forwarded-host"] || req.headers.host}`;
   const p = req.query.provider;
   const state = randomState();
   setCookie(res, `mm_oauth_${p}`, state, 600);

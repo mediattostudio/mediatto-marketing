@@ -3,6 +3,7 @@ import { metaExchange, tiktokExchange, syncMeta, syncTikTok } from "../../lib/pr
 
 // La red regresa aquí después de que autorizas
 export default async function handler(req, res) {
+  if (!process.env.APP_URL) process.env.APP_URL = `https://${req.headers["x-forwarded-host"] || req.headers.host}`;
   const p = req.query.provider;
   const back = (msg, ok) => redirect(res, `${appUrl()}/#redes?${ok ? "ok" : "error"}=${encodeURIComponent(msg)}`);
   if (!isAuthed(req)) return redirect(res, `${appUrl()}/`);
