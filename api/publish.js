@@ -1,5 +1,5 @@
 import { isAuthed, requireAuth, safeEqual } from "../lib/core.js";
-import { createUpload, createPublication, listPublications, processPublication, processDue, retry, cancel, remove, publicView } from "../lib/publish.js";
+import { createUpload, createPublication, listPublications, processPublication, processDue, retry, cancel, remove, publicView, tiktokCreatorInfo } from "../lib/publish.js";
 
 // GET    /api/publish                       → cola de publicaciones
 // GET    /api/publish?action=tick           → procesa lo programado (cron de Supabase cada 5 min, o la app)
@@ -20,6 +20,7 @@ export default async function handler(req, res) {
     }
     if (!requireAuth(req, res)) return;
 
+    if (req.method === "GET" && req.query.action === "tiktok-creator") return res.json(await tiktokCreatorInfo());
     if (req.method === "GET") return res.json({ publications: await listPublications() });
 
     if (req.method === "DELETE") {

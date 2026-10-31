@@ -268,6 +268,15 @@ details summary{cursor:pointer;font-weight:600;font-size:13px;padding:4px 0}
 .qitem .tools .btn{padding:4px 9px;font-size:12px}
 @media (max-width:1000px){.pubgrid{grid-template-columns:1fr}}
 @media (max-width:860px){.netpick{grid-template-columns:1fr}.pubfoot{position:static;padding-top:4px}.pubfoot .btn.gold{flex:1;justify-content:center}body[data-view="publicar"] .fab{display:none}}
+.ttbox{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--raised);display:flex;flex-direction:column;gap:12px}
+.ttwho{display:flex;gap:10px;align-items:center}.ttwho img{width:38px;height:38px;border-radius:50%;object-fit:cover}.ttwho b{font-weight:600}
+.ttrow{display:flex;gap:8px;flex-wrap:wrap}
+.ttck{display:flex;gap:8px;align-items:flex-start;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;min-width:0}
+.ttck input{accent-color:var(--gold);width:16px;height:16px;margin-top:2px;flex:none}
+.ttck span{display:flex;flex-direction:column;gap:2px;font-size:13px}.ttck small{color:var(--muted);font-size:11.5px;line-height:1.35}
+.ttck.dis{opacity:.5;cursor:not-allowed}
+.ttsub{display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-left:12px;border-left:2px solid var(--gold)}
+.ttbox a{color:var(--gold)}
 /* bottom tabs (cel) */
 .tabs{display:none}
 @media (max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -737,7 +746,14 @@ function openPrompter(id){
 }
 
 /* ---------- publicar ---------- */
-const P={files:[],nets:{ig:true,fb:true,tiktok:false},caption:"",per:{ig:"",fb:"",tiktok:""},when:"now",at:"",itemId:"",busy:false};
+const TT0=()=>({privacy:"",allowComment:false,allowDuet:false,allowStitch:false,disclose:false,yourBrand:false,branded:false});
+const P={files:[],nets:{ig:true,fb:true,tiktok:false},caption:"",per:{ig:"",fb:"",tiktok:""},when:"now",at:"",itemId:"",busy:false,tt:TT0()};
+S.ttCreator=null;S.ttCreatorErr=null;
+const TT_PRIV={PUBLIC_TO_EVERYONE:"Todos",MUTUAL_FOLLOW_FRIENDS:"Amigos",FOLLOWER_OF_CREATOR:"Seguidores",SELF_ONLY:"Solo yo"};
+const ttDirect=()=>activeNets().includes("tiktok")&&(S.conn||{}).tiktokPublish==="direct";
+async function loadTtCreator(){if(loadTtCreator.busy)return;loadTtCreator.busy=true;
+  try{S.ttCreator=await api("/api/publish?action=tiktok-creator");S.ttCreatorErr=null}catch(e){if(e.message!=="auth")S.ttCreatorErr=e.message}
+  finally{loadTtCreator.busy=false}if(S.view==="publicar")refreshView()}
 S.pubs=null;let pubPoll=null,ticking=false;
 const PUB_MAX_VIDEO=50*1024*1024;
 const pubKind=()=>P.files.length?(P.files[0].type==="video"?"video":P.files.length>1?"carousel":"image"):null;
@@ -767,22 +783,47 @@ function pubWarnings(){
   const nets=activeNets();
   if(nets.includes("ig")){const c=capFor("ig");if(c.length>2200)w.push({bad:true,t:`Instagram: el texto pasa de 2,200 caracteres (${c.length}).`});const h=(c.match(/#[\p{L}\p{N}_]+/gu)||[]).length;if(h>30)w.push({bad:true,t:`Instagram: máximo 30 hashtags (tienes ${h}).`})}
   if(P.when==="later"&&P.at&&new Date(P.at)<new Date())w.push({bad:true,t:"La fecha programada ya pasó."});
+  if(ttDirect()){const c=S.ttCreator,f=P.files[0];
+    if(c&&c.maxDuration&&f&&f.dur&&f.dur>c.maxDuration)w.push({bad:true,t:`TikTok: tu cuenta permite videos de hasta ${c.maxDuration} s.`});
+    if(P.tt.disclose&&!P.tt.yourBrand&&!P.tt.branded)w.push({bad:true,t:"TikTok: indica si el video promociona tu marca, a un tercero o ambos."})}
   return w;
 }
 function canSubmit(){
   if(P.busy||!P.files.length||P.files.some(f=>f.status!=="ready"))return false;
   if(!activeNets().length)return false;
   if(P.when==="later"&&!P.at)return false;
+  if(ttDirect()&&(!S.ttCreator||!P.tt.privacy))return false;
   return !pubWarnings().some(x=>x.bad);
 }
 const fmtWhen=t=>{const d=new Date(t);return `${fmtShort(iso(d))} · ${pad(d.getHours())}:${pad(d.getMinutes())}`};
 const ST_LBL={pending:"Pendiente",processing:"Publicando…",done:"Publicado",error:"Error",scheduled:"Programado"};
 
+function ttSection(){
+  const c=S.ttCreator,t=P.tt;
+  if(!c){if(!S.ttCreatorErr)loadTtCreator();
+    return `<div class="ttbox"><div class="lbl">TikTok</div>${S.ttCreatorErr?`<div class="warn bad">No se pudo leer tu cuenta de TikTok: ${esc(S.ttCreatorErr)} <button class="btn" data-ttretry style="margin-left:6px">Reintentar</button></div>`:`<span class="words">Cargando tu cuenta de TikTok…</span>`}</div>`}
+  const ck=(k,label,dis,hint)=>`<label class="ttck ${dis?"dis":""}"><input type="checkbox" data-tt="${k}" ${t[k]&&!dis?"checked":""} ${dis?"disabled":""}><span>${label}${hint?`<small>${hint}</small>`:""}</span></label>`;
+  const opts=c.privacyOptions.length?c.privacyOptions:Object.keys(TT_PRIV);
+  return `<div class="ttbox">
+   <div class="ttwho">${c.avatar?`<img src="${esc(c.avatar)}" alt="">`:""}<div><div class="lbl">TikTok · publicando como</div><b>${esc(c.nickname||c.username)}</b>${c.username?` <span class="words">@${esc(c.username)}</span>`:""}</div></div>
+   <div class="field"><label class="lbl" for="tt-priv">¿Quién puede ver este video?</label>
+    <select id="tt-priv"><option value="" ${t.privacy?"":"selected"} disabled>Elige una opción</option>${opts.map(o=>`<option value="${o}" ${t.privacy===o?"selected":""} ${o==="SELF_ONLY"&&t.branded?"disabled":""}>${TT_PRIV[o]||o}${o==="SELF_ONLY"&&t.branded?" (no disponible con contenido de marca)":""}</option>`).join("")}</select></div>
+   <div><div class="lbl" style="margin-bottom:4px">Permitir a los usuarios</div><div class="ttrow">
+    ${ck("allowComment","Comentar",c.commentDisabled)}${ck("allowDuet","Dúo",c.duetDisabled)}${ck("allowStitch","Stitch",c.stitchDisabled)}</div>
+    ${c.commentDisabled||c.duetDisabled||c.stitchDisabled?`<span class="words">Las opciones grises están desactivadas en la configuración de tu cuenta de TikTok.</span>`:""}</div>
+   <div class="ttdisc">
+    <label class="ttck"><input type="checkbox" data-tt="disclose" ${t.disclose?"checked":""}><span><b>Divulgar contenido comercial</b><small>Actívalo si el video promociona una marca, producto o servicio.</small></span></label>
+    ${t.disclose?`<div class="ttsub">${ck("yourBrand","Tu marca",false,"Promocionas tu propio negocio. TikTok lo etiquetará como “Contenido promocional”.")}
+     ${ck("branded","Contenido de marca",false,"Promocionas a otra marca o un tercero. TikTok lo etiquetará como “Colaboración pagada”.")}</div>`:""}
+   </div>
+   <p class="words" style="margin:0">Al publicar aceptas la <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener">Confirmación de uso de música</a> de TikTok${t.branded?` y su <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener">Política de contenido de marca</a>`:""}.</p>
+  </div>`;
+}
 function vPublicar(){
   if(S.pubs===null)loadPubs();
   const k=pubKind();
   const items=all().filter(i=>i.stage!=="publicado"&&!i.example).sort(byDate).slice(0,60);
-  const thumbs=P.files.map((f,i)=>`<div class="thumb">${f.type==="video"?`<video src="${esc(f.local)}" muted playsinline preload="metadata"></video>`:`<img src="${esc(f.local)}" alt="">`}
+  const thumbs=P.files.map((f,i)=>`<div class="thumb">${f.type==="video"?`<video src="${esc(f.local)}" muted playsinline preload="metadata" controls aria-label="Vista previa del video"></video>`:`<img src="${esc(f.local)}" alt="">`}
     ${P.files.length>1?`<span class="n">${i+1}</span>`:""}<button class="x" data-prm="${f.id}" aria-label="Quitar">×</button>
     ${f.status==="uploading"?`<div class="bar"><i style="width:${Math.round(f.progress*100)}%"></i></div>`:""}${f.error?`<div class="bad">Error</div>`:""}</div>`).join("");
   const netBtn=(n,label)=>{const st=netState(n);const on=P.nets[n]&&!st.off;
@@ -797,7 +838,7 @@ function vPublicar(){
     const th=p.purged||!m?`<div class="qt">${svg("send")}</div>`:m.type==="video"?`<div class="qt"><video src="${esc(m.url)}#t=0.5" muted playsinline preload="metadata"></video></div>`:`<div class="qt" style="background-image:url('${esc(m.url)}')"></div>`;
     const cap=p.captions?.all||p.captions?.ig||p.captions?.fb||"";
     const rows=Object.entries(p.targets).map(([n,t])=>{const s=p.status==="scheduled"&&t.status==="pending"?"scheduled":t.status;
-      const lbl=n==="tiktok"&&t.status==="done"&&/borradores/.test(t.note||"")?"En borradores":ST_LBL[s]||s;
+      const lbl=(n==="tiktok"&&t.status==="done"&&/borradores/.test(t.note||"")?"En borradores":ST_LBL[s]||s)+(n==="tiktok"&&t.privacy?` (${TT_PRIV[t.privacy]||t.privacy})`:"");
       return `<div class="qnet"><b>${NETN[n]}</b><span class="s-${t.status}">${lbl}${t.permalink?` · <a href="${esc(t.permalink)}" target="_blank" rel="noopener">Ver</a>`:""}${t.error?` · ${esc(t.error)}`:t.note?` · <span style="color:var(--muted)">${esc(t.note)}</span>`:""}</span></div>`}).join("");
     const errs=Object.values(p.targets).some(t=>t.status==="error");
     return `<div class="qitem">${th}<div class="qb"><div class="qw">${p.status==="scheduled"?"Programado · ":""}${fmtWhen(p.scheduledAt)}${p.media.length>1?` · ${p.media.length} imágenes`:""}</div>
@@ -826,6 +867,7 @@ function vPublicar(){
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${["ig","fb","tiktok"].filter(n=>nets.includes(n)||P.per[n]).map(n=>`<div class="field"><label class="lbl" for="p-per-${n}">${NETN[n]}</label><textarea id="p-per-${n}" data-pper="${n}" rows="3" placeholder="Igual que el texto general">${esc(P.per[n])}</textarea></div>`).join("")||`<span class="words">Elige redes primero.</span>`}</div>
      </details>
     </div>
+${ttDirect()?ttSection():""}
     <div class="fields">
      <div class="field"><span class="lbl">4 · Cuándo</span><div class="seg"><button data-pwhen="now" aria-pressed="${P.when==="now"}">Ahora</button><button data-pwhen="later" aria-pressed="${P.when==="later"}">Programar</button></div></div>
      ${P.when==="later"?`<div class="field"><label class="lbl" for="p-at">Fecha y hora</label><input type="datetime-local" id="p-at" min="${minAt}" value="${esc(P.at)}"></div>`:"<div></div>"}
@@ -901,7 +943,7 @@ async function uploadOne(e){
   }catch(err){if(err.message==="auth")return;e.status="error";e.error=err.message}
   upd();
 }
-function resetComposer(){P.files.forEach(f=>URL.revokeObjectURL(f.local));Object.assign(P,{files:[],caption:"",per:{ig:"",fb:"",tiktok:""},when:"now",at:"",itemId:"",busy:false})}
+function resetComposer(){P.files.forEach(f=>URL.revokeObjectURL(f.local));Object.assign(P,{files:[],caption:"",per:{ig:"",fb:"",tiktok:""},when:"now",at:"",itemId:"",busy:false,tt:TT0()})}
 function fillFromItem(id){
   const it=S.items.get(id);P.itemId=id;if(!it)return;
   if(!P.caption.trim())P.caption=[it.hook,it.cta,it.keyword?`Comenta "${it.keyword}"`:""].filter(Boolean).join("\n\n");
@@ -914,11 +956,11 @@ async function submitPub(){
   const scheduledAt=P.when==="later"?new Date(P.at).toISOString():null;
   P.busy=true;render();
   try{
-    const b=await api("/api/publish",{method:"POST",body:JSON.stringify({action:"create",media:P.files.map(({path,url,type,mime,size,w,h})=>({path,url,type,mime,size,width:w,height:h})),captions,targets:nets,scheduledAt,itemId:P.itemId||null})});
+    const b=await api("/api/publish",{method:"POST",body:JSON.stringify({action:"create",media:P.files.map(({path,url,type,mime,size,w,h,dur})=>({path,url,type,mime,size,width:w,height:h,duration:dur?Math.round(dur):undefined})),captions,targets:nets,scheduledAt,itemId:P.itemId||null,tiktok:nets.includes("tiktok")?P.tt:undefined})});
     const it=P.itemId&&S.items.get(P.itemId);
     if(it&&scheduledAt){const d=new Date(scheduledAt);persist({...it,stage:"listo",date:iso(d),time:`${pad(d.getHours())}:${pad(d.getMinutes())}`},true)}
     const pub=b.publication,st=pub?.targets?Object.values(pub.targets).map(t=>t.status):[];
-    toast(scheduledAt?`Programado para ${fmtWhen(scheduledAt)}`:st.every(s=>s==="done")?"¡Publicado!":st.some(s=>s==="error")?"Hubo un error en alguna red, revisa la cola":"Publicando… Instagram termina de procesar en un momento",4500);
+    toast(scheduledAt?`Programado para ${fmtWhen(scheduledAt)}`:st.every(s=>s==="done")?"¡Publicado!":st.some(s=>s==="error")?"Hubo un error en alguna red, revisa la cola":nets.includes("tiktok")?"Publicando… TikTok puede tardar unos minutos en mostrarlo en tu perfil":"Publicando… Instagram termina de procesar en un momento",4500);
     resetComposer();
     if(it&&!scheduledAt)loadItems().then(refreshView).catch(()=>{});
   }catch(e){if(e.message!=="auth")toast("No se pudo: "+e.message,6000);P.busy=false}
@@ -929,10 +971,11 @@ document.addEventListener("click",ev=>{
   const t=ev.target.closest("button");if(!t)return;const d=t.dataset;
   if(d.pubfrom){readEditor();const e=S.editing;if(!e.title)e.title=e.hook?e.hook.slice(0,60):"Sin título";persist(e,true);S.editing=null;renderEditor();fillFromItem(e.id);go("publicar");return}
   if(S.view!=="publicar")return;
-  if(d.pnet){P.nets[d.pnet]=!P.nets[d.pnet];render();return}
+  if(d.pnet){P.nets[d.pnet]=!P.nets[d.pnet];if(d.pnet==="tiktok"&&P.nets.tiktok&&!S.ttCreator)loadTtCreator();render();return}
   if(d.pwhen){P.when=d.pwhen;if(P.when==="later"&&!P.at){const x=new Date(Date.now()+864e5);P.at=`${iso(x)}T10:00`}render();return}
   if(d.prm){const i=P.files.findIndex(f=>f.id===d.prm);if(i>=0){URL.revokeObjectURL(P.files[i].local);P.files.splice(i,1)}render();return}
   if(d.preset!==undefined){resetComposer();render();return}
+  if(d.ttretry!==undefined){S.ttCreatorErr=null;loadTtCreator();render();return}
   if(d.psubmit!==undefined){submitPub();return}
   if(d.preload!==undefined){loadSocial().then(loadPubs);return}
   if(d.pretry){t.disabled=true;t.textContent="Reintentando…";api("/api/publish",{method:"POST",body:JSON.stringify({action:"retry",id:d.pretry})}).then(()=>toast("Reintentado")).catch(e=>toast(e.message,5000)).finally(loadPubs);return}
@@ -944,6 +987,9 @@ document.addEventListener("change",ev=>{
   if(el.dataset.pfile!==undefined){const fl=el.files;if(fl&&fl.length)addFiles(fl);el.value="";return}
   if(el.id==="p-item"){if(el.value)fillFromItem(el.value);else P.itemId="";render();return}
   if(el.id==="p-at"){P.at=el.value;render();return}
+  if(el.id==="tt-priv"){P.tt.privacy=el.value;render();return}
+  if(el.dataset.tt){P.tt[el.dataset.tt]=el.checked;if(el.dataset.tt==="disclose"&&!el.checked){P.tt.yourBrand=false;P.tt.branded=false}
+    if(el.dataset.tt==="branded"&&el.checked&&P.tt.privacy==="SELF_ONLY"){P.tt.privacy="";toast("El contenido de marca no puede ser privado: elige otra privacidad",4000)}render();return}
 });
 document.addEventListener("input",ev=>{
   const el=ev.target;if(S.view!=="publicar")return;
