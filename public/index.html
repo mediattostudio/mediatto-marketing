@@ -552,7 +552,7 @@ function vRedes(){
     <p>${info}</p>${lines}
     <div class="tools">${!c.configured[key]?`<span class="words" style="color:var(--warn)">Falta configurar las claves de ${key==="meta"?"Meta":"TikTok"} en Vercel (ver README).</span>`:
       on?`<a class="btn" href="/api/connect/${key}">Reconectar</a><button class="btn danger" data-disconnect="${key}">Desconectar</button>`:`<a class="btn gold" href="/api/connect/${key}">Conectar</a>`}</div></div>`;
-  const resLine=r=>r&&(r.igError||r.fbError||r.tiktokError)?`<p style="color:var(--bad)">Último error: ${esc(r.igError||r.fbError||r.tiktokError)}</p>`:"";
+  const resLine=r=>(r&&(r.igError||r.fbError||r.tiktokError)?`<p style="color:var(--bad)">Último error: ${esc(r.igError||r.fbError||r.tiktokError)}</p>`:"")+(r&&r.fbNote?`<p>${esc(r.fbNote)}</p>`:"")+(r&&!r.igError&&r.ig?`<p style="color:var(--ok)">Instagram: ${r.ig} publicaciones sincronizadas.</p>`:"");
   const cards=connCard("meta","Instagram + Facebook",c.meta?.igPicture?`<img src="${esc(c.meta.igPicture)}" alt="">`:"IG",metaOn,
       metaOn?`${c.meta.ig?"@"+esc(c.meta.ig):"Sin Instagram vinculado"} · ${esc(c.meta.page||"")} · actualizado ${ago(c.meta.lastSync)}`:"Conecta tu página de Facebook y tu Instagram profesional para traer seguidores, alcance, reproducciones, guardados y compartidos.",
       resLine(c.meta?.lastResult)+(c.meta?.userTokenExpires&&c.meta.userTokenExpires-Date.now()<7*864e5?`<p style="color:var(--warn)">Tu permiso de Meta vence pronto: toca Reconectar.</p>`:""))
