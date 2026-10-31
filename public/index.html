@@ -825,7 +825,7 @@ function vPublicar(){
   const items=all().filter(i=>i.stage!=="publicado"&&!i.example).sort(byDate).slice(0,60);
   const thumbs=P.files.map((f,i)=>`<div class="thumb">${f.type==="video"?`<video src="${esc(f.local)}" muted playsinline preload="metadata" controls aria-label="Vista previa del video"></video>`:`<img src="${esc(f.local)}" alt="">`}
     ${P.files.length>1?`<span class="n">${i+1}</span>`:""}<button class="x" data-prm="${f.id}" aria-label="Quitar">×</button>
-    ${f.status==="uploading"?`<div class="bar"><i style="width:${Math.round(f.progress*100)}%"></i></div>`:""}${f.error?`<div class="bad">Error</div>`:""}</div>`).join("");
+    ${f.status==="uploading"?`<div class="bar"><i style="width:${Math.round(f.progress*100)}%"></i></div>`:""}${f.error?`<div class="bad" title="${esc(f.error)}" style="white-space:normal;font-size:11px;line-height:1.3">${esc(f.error)}</div>`:""}</div>`).join("");
   const netBtn=(n,label)=>{const st=netState(n);const on=P.nets[n]&&!st.off;
     return `<button class="netbtn" data-pnet="${n}" aria-pressed="${on}" ${st.off?"disabled":""}><b><i>${on?"✓":""}</i>${label}</b><small>${st.msg}</small></button>`};
   const nets=activeNets();
