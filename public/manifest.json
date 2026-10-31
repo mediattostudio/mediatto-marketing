@@ -1,0 +1,9 @@
+{
+  "name": "Mediatto Marketing",
+  "short_name": "Marketing",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141413",
+  "theme_color": "#1A1A1A",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
