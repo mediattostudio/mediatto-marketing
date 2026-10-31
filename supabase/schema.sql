@@ -28,8 +28,25 @@ create table if not exists account_snapshots (
   primary key (provider, day)
 );
 
+create table if not exists publications (
+  id text primary key,
+  status text not null default 'scheduled',
+  scheduled_at timestamptz not null default now(),
+  item_id text,
+  media jsonb not null,
+  captions jsonb not null default '{}',
+  targets jsonb not null,
+  locked_until timestamptz,
+  media_purged boolean,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists publications_due_idx on publications (status, scheduled_at);
+-- El reloj de 5 minutos para publicar lo programado está en supabase/publicar.sql
+
 -- La app usa la service key desde el servidor; bloqueamos todo acceso público.
 alter table items enable row level security;
 alter table connections enable row level security;
 alter table social_posts enable row level security;
 alter table account_snapshots enable row level security;
+alter table publications enable row level security;

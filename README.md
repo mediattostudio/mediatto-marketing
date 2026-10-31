@@ -1,6 +1,6 @@
 # Mediatto Marketing
 
-App web de marketing de Mediatto Studio: calendario de contenido, pipeline de producción, guiones con teleprompter, métricas por pieza y conexión directa con Instagram, Facebook y TikTok.
+App web de marketing de Mediatto Studio: calendario de contenido, pipeline de producción, guiones con teleprompter, métricas por pieza, conexión directa con Instagram, Facebook y TikTok, y **publicación en las 3 redes desde un solo lugar** (ahora o programada).
 
 - **Hosting:** Vercel (gratis)
 - **Base de datos:** Supabase (gratis)
@@ -53,6 +53,8 @@ App web de marketing de Mediatto Studio: calendario de contenido, pipeline de pr
 
 **Qué trae:** seguidores, publicaciones, reproducciones, alcance, likes, comentarios, guardados y compartidos de Instagram; seguidores, reacciones, comentarios y compartidos de Facebook.
 
+**Permisos para publicar:** la app pide además `instagram_content_publish` y `pages_manage_posts`. Si ya estabas conectado antes de la pestaña Publicar, ve a **Redes → Reconectar** y acepta todo. En modo desarrollo funcionan sin revisión de Meta porque eres administrador de la app.
+
 **Permiso de 60 días:** Meta pide reconectar cada ~60 días. La app te avisa una semana antes en la pestaña Redes; solo tocas **Reconectar**.
 
 ## 4. TikTok — 10 min
@@ -70,7 +72,32 @@ App web de marketing de Mediatto Studio: calendario de contenido, pipeline de pr
 
 **Qué trae:** seguidores, likes totales, y por video: vistas, likes, comentarios y compartidos.
 
-> En sandbox solo tu cuenta puede conectarse, que es justo lo que necesitas. Publicar o programar en TikTok desde la app sí requeriría revisión de TikTok.
+> En sandbox solo tu cuenta puede conectarse, que es justo lo que necesitas.
+
+### Publicar en TikTok (cuando lo actives)
+
+1. En tu app de TikTok agrega el producto **Content Posting API** y activa el scope `video.upload` (llega a tus borradores) y, si quieres publicar directo, `video.publish` con **Direct Post** activado.
+2. En Vercel agrega `TIKTOK_PUBLISH=1`. Para publicación directa agrega también `TIKTOK_POST_MODE=direct` (si no, usa borradores).
+3. **Redeploy** → **Redes → Reconectar** en TikTok.
+
+- **Borradores (default):** el video llega a tu bandeja de TikTok y solo tocas Publicar en la app. Funciona sin auditoría.
+- **Directo:** mientras TikTok no audite tu app, los videos salen **en privado**. Para que salgan públicos hay que pedir la auditoría en el portal de TikTok (piden un video demo de la app y la política de privacidad, que ya está en `/privacidad`).
+- Por ahora en TikTok solo se publican videos (las fotos requieren otro flujo).
+
+## 5. Publicar en redes — 5 min
+
+1. En Supabase → **SQL Editor** abre `supabase/publicar.sql`, cambia `TU_CRON_SECRET` por tu valor de `CRON_SECRET` de Vercel y dale **Run**. Crea la tabla de publicaciones y un reloj cada 5 minutos que publica lo programado (Vercel gratis solo permite un cron al día).
+2. **Redes → Reconectar** Instagram + Facebook para dar los permisos de publicar.
+3. Listo: pestaña **Publicar**.
+
+**Cómo funciona:** el archivo se sube directo del cel a Supabase Storage (bucket público `media`, se crea solo). Las redes lo descargan de ahí. A los 7 días de publicado se borra para no llenar el espacio gratis (1 GB).
+
+**Formatos:**
+- **Video (reel):** MP4 vertical 9:16, 1080×1920, de 3 s a 15 min, hasta 50 MB (límite de Supabase gratis). Se publica como Reel en Instagram, video en Facebook y video en TikTok.
+- **Imágenes:** de 1 a 10. Se convierten solas a JPEG (Instagram no acepta PNG). Ideal 4:5 (1080×1350). Con 2 o más es carrusel en Instagram y post con varias fotos en Facebook.
+- Instagram: máximo 2,200 caracteres, 30 hashtags y 25 publicaciones por API cada 24 h.
+
+Cada red se publica por separado: si una falla, las demás salen igual y puedes darle **Reintentar** solo a la que falló.
 
 ---
 
@@ -81,6 +108,7 @@ App web de marketing de Mediatto Studio: calendario de contenido, pipeline de pr
 - **Pipeline:** Idea → Guion → Grabar → Editar → Listo → Publicado. Arrastra las tarjetas.
 - **Guiones:** escribe hook, guion, CTA y keyword. Botón **Teleprompter** para grabar.
 - **Métricas:** resultados de tus piezas publicadas. En cada pieza, el campo **Publicación vinculada** la conecta con su post real y los números se llenan solos. Leads y seguidores ganados los capturas tú.
+- **Publicar:** sube un video o imágenes, elige redes, escribe el texto (uno general o distinto por red) y publica ahora o programa. Si eliges una pieza del calendario, se marca como publicada y se vincula sola. También desde cualquier pieza con el botón **Publicar**.
 - **Redes:** conexiones, seguidores con historial, mejores publicaciones y recientes por red.
 
 ## Estructura
@@ -95,7 +123,10 @@ api/                     Funciones del servidor (Vercel)
   connections            Estado de conexiones
   sync                   Descarga estadísticas (cron diario + botón)
   stats                  Publicaciones e historial para la app
+  publish                Subir archivos, publicar, programar y cola
 lib/                     Supabase, sesión y lógica de cada red
+lib/publish.js           Motor de publicación (Instagram, Facebook, TikTok)
 supabase/schema.sql      Tablas
+supabase/publicar.sql    Tabla de publicaciones + reloj de 5 min
 vercel.json              Cron diario
 ```
