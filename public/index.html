@@ -271,6 +271,10 @@ details summary{cursor:pointer;font-weight:600;font-size:13px;padding:4px 0}
 .prompter{position:fixed;inset:0;background:#0E0E0D;color:#F2EEE6;z-index:70;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .prompter .pbar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid #2A2925;flex-wrap:wrap}
 .prompter .pbar .btn{background:#1F1E1B;color:#F2EEE6;border-color:#34322D}
+.prompter .pscenes{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid #2A2925}
+.prompter .pscenes .btn{background:#1F1E1B;color:#F2EEE6;border-color:#34322D}.prompter .pscenes .btn:disabled{opacity:.35}
+.prompter .pnum{text-align:center;font-size:14px;color:#C9A84C;display:flex;flex-direction:column}.prompter .pnum span{font-family:var(--f-mono);font-size:11px;color:#8C867B}
+.prompter .ptext.byscene{padding-top:8vh;padding-bottom:30vh}
 .prompter .ptext{flex:1;overflow-y:auto;padding:40vh max(20px,6vw);font-family:var(--f-display);font-weight:700;line-height:1.35;white-space:pre-wrap;scrollbar-width:none}
 .prompter .ptext.mirror{transform:scaleX(-1)}
 .prompter .guide{position:absolute;left:0;right:0;top:42%;height:2px;background:rgba(201,168,76,.5);pointer-events:none}
@@ -889,9 +893,25 @@ function openPrompter(id){
   const el=document.createElement("div");el.className="prompter";
   el.innerHTML=`<div class="pbar"><button class="btn" data-pclose>✕ Cerrar</button>
    <div class="tools"><button class="btn" data-pfs="-4">A−</button><button class="btn" data-pfs="4">A+</button><button class="btn" data-psp="-0.4">Lento</button><button class="btn" data-psp="0.4">Rápido</button><button class="btn" data-pmir>Espejo</button><button class="btn" style="background:#C9A84C;color:#1A1A1A;border-color:#C9A84C" data-pplay>▶ Iniciar</button></div></div>
+   <div class="pscenes" id="pscenes" hidden></div>
    <div class="ptext" id="ptext"></div><div class="guide"></div>`;
   document.body.appendChild(el);
-  const t=el.querySelector("#ptext");t.textContent=(Array.isArray(i.scenes)&&i.scenes.length&&!isSlides(i))?i.scenes.map(x=>x.voz).filter(Boolean).join("\n\n"):[i.hook,i.script,i.cta].filter(Boolean).join("\n\n");
+  const t=el.querySelector("#ptext");
+  // Con guion por escenas: una escena a la vez, solo lo que se dice
+  const allSc=(Array.isArray(i.scenes)&&!isSlides(i))?i.scenes:[];
+  const sc=allSc.map((x,ix)=>({...x,ix})).filter(x=>(x.voz||"").trim());
+  let cur=0;
+  const bar=el.querySelector("#pscenes");
+  const showScene=()=>{
+    if(!sc.length){t.textContent=[i.hook,i.script,i.cta].filter(Boolean).join("\n\n");return}
+    const x=sc[cur],tag=sceneTag(allSc,x.ix,false);
+    t.textContent=x.voz;t.scrollTop=0;
+    bar.hidden=false;t.classList.add("byscene");el.querySelector(".guide").hidden=true;
+    bar.innerHTML=`<button class="btn" data-pprev ${cur===0?"disabled":""}>‹ Anterior</button>
+     <div class="pnum"><b>Escena ${x.ix+1}${tag?` · ${tag}`:""}</b><span>${cur+1} de ${sc.length}</span></div>
+     <button class="btn" data-pnext ${cur===sc.length-1?"disabled":""}>Siguiente ›</button>`;
+  };
+  showScene();
   const apply=()=>{t.style.fontSize=size+"px";t.classList.toggle("mirror",mirror)};apply();
   let acc=0;const step=()=>{acc+=speed;if(acc>=1){t.scrollTop+=Math.floor(acc);acc-=Math.floor(acc)}raf=requestAnimationFrame(step)};
   const play=b=>{playing=b;el.querySelector("[data-pplay]").textContent=b?"❚❚ Pausa":"▶ Iniciar";cancelAnimationFrame(raf);if(b)raf=requestAnimationFrame(step)};
@@ -901,7 +921,14 @@ function openPrompter(id){
     if(b.dataset.pfs){size=Math.min(96,Math.max(20,size+ +b.dataset.pfs));try{localStorage.setItem("mm_ps",size)}catch(e){};apply()}
     if(b.dataset.psp){speed=Math.min(6,Math.max(.2,speed+ +b.dataset.psp))}
     if(b.dataset.pmir!==undefined){mirror=!mirror;apply()}
-    if(b.dataset.pplay!==undefined)play(!playing)});
+    if(b.dataset.pplay!==undefined)play(!playing);
+    if(b.dataset.pprev!==undefined&&cur>0){cur--;play(false);showScene()}
+    if(b.dataset.pnext!==undefined&&cur<sc.length-1){cur++;play(false);showScene()}});
+  const onKey=ev=>{if(!document.body.contains(el)){document.removeEventListener("keydown",onKey);return}
+    if(ev.key==="ArrowRight"&&cur<sc.length-1){cur++;play(false);showScene()}
+    else if(ev.key==="ArrowLeft"&&cur>0){cur--;play(false);showScene()}
+    else if(ev.key===" "){ev.preventDefault();play(!playing)}};
+  document.addEventListener("keydown",onKey);
   pr=el;
 }
 
