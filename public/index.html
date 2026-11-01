@@ -202,6 +202,9 @@ tr:last-child td{border-bottom:0}
 .field{display:flex;flex-direction:column;gap:4px;min-width:0}
 .field input,.field select,.field textarea{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--raised);width:100%;min-width:0}
 .field textarea{resize:vertical;min-height:70px;line-height:1.55}
+.tpick{display:flex;align-items:center;gap:4px}
+.tpick select{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:8px 2px 8px 8px;background:var(--raised);font-variant-numeric:tabular-nums}
+.tpick span{color:var(--muted)}
 .stagepick{display:flex;gap:4px;flex-wrap:wrap}
 .stagepick button{border:1px solid var(--line);background:var(--raised);border-radius:99px;padding:4px 10px;font-size:12px;display:inline-flex;gap:6px;align-items:center}
 .stagepick button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -668,6 +671,21 @@ function vRedes(){
    <section class="panel"><h3>Recientes <small>${posts.length} sincronizadas</small></h3>${posts.length?`<div class="posts">${posts.slice(0,12).map(postCard).join("")}</div>`:`<div class="empty">Sin publicaciones todavía.</div>`}</section>`}`;
 }
 
+
+/* selector de hora: hora · minutos · a.m./p.m. (más fácil que el campo nativo en Safari/iPhone) */
+function timePick(pre,val,allowEmpty){
+  let h24=null,m=0;if(/^\d{1,2}:\d{2}/.test(val||"")){[h24,m]=val.split(":").map(Number)}
+  const h12=h24==null?"":((h24+11)%12)+1,ap=h24==null?"pm":(h24<12?"am":"pm");
+  const mins=[...Array(12)].map((_,i)=>i*5);if(h24!=null&&!mins.includes(m))mins.push(m),mins.sort((a,b)=>a-b);
+  return `<div class="tpick"><select id="${pre}-h" aria-label="Hora">${allowEmpty?`<option value="" ${h12===""?"selected":""}>—</option>`:""}${[...Array(12)].map((_,i)=>`<option value="${i+1}" ${h12===i+1?"selected":""}>${i+1}</option>`).join("")}</select>
+   <span>:</span><select id="${pre}-m" aria-label="Minutos">${mins.map(x=>`<option value="${x}" ${h24!=null&&x===m?"selected":""}>${String(x).padStart(2,"0")}</option>`).join("")}</select>
+   <select id="${pre}-ap" aria-label="a.m. o p.m."><option value="am" ${ap==="am"?"selected":""}>am</option><option value="pm" ${ap==="pm"?"selected":""}>pm</option></select></div>`;
+}
+function readTime(pre){
+  const h=document.getElementById(pre+"-h")?.value;if(!h)return"";
+  const m=+document.getElementById(pre+"-m").value,ap=document.getElementById(pre+"-ap").value;
+  const h24=(+h%12)+(ap==="pm"?12:0);return `${String(h24).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+}
 /* ---------- editor ---------- */
 function openEditor(id,over){
   const it=id?S.items.get(id):null;
@@ -690,7 +708,7 @@ function renderEditor(){
      <div class="field"><label class="lbl" for="e-format">Formato</label><select id="e-format">${opt(FORMATS,e.format)}</select></div>
      <div class="field" style="grid-column:1/-1"><span class="lbl">Redes</span><div class="stagepick">${PLATFORMS.map(([k,n])=>`<button type="button" data-enet="${k}" aria-pressed="${netsOf(e).includes(k)}">${n}</button>`).join("")}</div></div>
      <div class="field"><label class="lbl" for="e-date">Fecha de publicación</label><input type="date" id="e-date" value="${esc(e.date)}"></div>
-     <div class="field"><label class="lbl" for="e-time">Hora</label><input type="time" id="e-time" value="${esc(e.time)}"></div>
+     <div class="field"><label class="lbl" for="e-time-h">Hora</label>${timePick("e-time",e.time,true)}</div>
      <div class="field" style="grid-column:1/-1"><label class="lbl" for="e-pillar">Pilar</label><select id="e-pillar">${opt(PILLARS.map(p=>[p,p]),e.pillar)}</select></div>
     </div>
     <div class="field"><label class="lbl" for="e-hook">Hook</label><textarea id="e-hook" rows="2" placeholder="La frase de los primeros 3 segundos">${esc(e.hook)}</textarea></div>
@@ -714,7 +732,7 @@ function renderEditor(){
 function readEditor(){
   const e=S.editing;if(!e)return;
   const v=id=>document.getElementById(id)?.value??"";
-  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),date:v("e-date"),time:v("e-time"),pillar:v("e-pillar"),hook:v("e-hook"),script:v("e-script"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
+  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),date:v("e-date"),time:readTime("e-time"),pillar:v("e-pillar"),hook:v("e-hook"),script:v("e-script"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
   document.querySelectorAll("[data-ckt]").forEach(el=>{const c=e.checklist[+el.dataset.ckt];if(c)c.t=el.value});
   e.metrics=e.metrics||{};document.querySelectorAll("[data-em]").forEach(el=>{const n=el.value.replace(/[^\d.]/g,"");if(n==="")delete e.metrics[el.dataset.em];else e.metrics[el.dataset.em]=+n});
 }
@@ -871,7 +889,7 @@ function vPublicar(){
 ${ttDirect()?ttSection():""}
     <div class="fields">
      <div class="field"><span class="lbl">4 · Cuándo</span><div class="seg"><button data-pwhen="now" aria-pressed="${P.when==="now"}">Ahora</button><button data-pwhen="later" aria-pressed="${P.when==="later"}">Programar</button></div></div>
-     ${P.when==="later"?`<div class="field"><label class="lbl" for="p-at">Fecha y hora</label><input type="datetime-local" id="p-at" min="${minAt}" value="${esc(P.at)}"></div>`:"<div></div>"}
+     ${P.when==="later"?`<div class="field"><label class="lbl" for="p-ad">Fecha y hora</label><div style="display:flex;gap:8px;flex-wrap:wrap"><input type="date" id="p-ad" min="${minAt.slice(0,10)}" value="${esc((P.at||"").slice(0,10))}" style="flex:1;min-width:140px">${timePick("p-at",(P.at||"").slice(11,16)||"10:00",false)}</div></div>`:"<div></div>"}
      <div class="field" style="grid-column:1/-1"><label class="lbl" for="p-item">Pieza del calendario (opcional)</label>
       <select id="p-item"><option value="">Ninguna</option>${items.map(i=>`<option value="${esc(i.id)}" ${P.itemId===i.id?"selected":""}>${esc(fmtShort(i.date))} · ${esc(i.title||"Sin título")}</option>`).join("")}${P.itemId&&!items.some(i=>i.id===P.itemId)&&S.items.get(P.itemId)?`<option value="${esc(P.itemId)}" selected>${esc(S.items.get(P.itemId).title)}</option>`:""}</select></div>
     </div>
@@ -988,7 +1006,7 @@ document.addEventListener("change",ev=>{
   const el=ev.target;if(S.view!=="publicar")return;
   if(el.dataset.pfile!==undefined){const fl=el.files;if(fl&&fl.length)addFiles(fl);el.value="";return}
   if(el.id==="p-item"){if(el.value)fillFromItem(el.value);else P.itemId="";render();return}
-  if(el.id==="p-at"){P.at=el.value;render();return}
+  if(el.id==="p-ad"||/^p-at-/.test(el.id)){const d=document.getElementById("p-ad")?.value||"";P.at=d?`${d}T${readTime("p-at")}`:"";render();return}
   if(el.id==="tt-priv"){P.tt.privacy=el.value;render();return}
   if(el.dataset.tt){P.tt[el.dataset.tt]=el.checked;if(el.dataset.tt==="disclose"&&!el.checked){P.tt.yourBrand=false;P.tt.branded=false}
     if(el.dataset.tt==="branded"&&el.checked&&P.tt.privacy==="SELF_ONLY"){P.tt.privacy="";toast("El contenido de marca no puede ser privado: elige otra privacidad",4000)}render();return}
