@@ -340,6 +340,7 @@ const STAGES=[
 const SN=Object.fromEntries(STAGES.map(s=>[s.id,s.n]));
 const FORMATS=[["reel","Reel"],["carrusel","Carrusel"],["post","Post"],["story","Story"]];
 const PLATFORMS=[["ig","Instagram"],["fb","Facebook"],["tiktok","TikTok"],["yt","YouTube"]];
+const netsOf=i=>Array.isArray(i.platforms)&&i.platforms.length?i.platforms:(i.platform?[i.platform]:[]);
 const PILLARS=["Autoridad","Autenticidad","Crecimiento","Creencia"];
 const CHECK={
  reel:["Guion aprobado","Lista de tomas","Grabar tomas","B-roll de obra","Edición","Subtítulos","Portada","Caption + hashtags","Programar"],
@@ -450,7 +451,7 @@ const progress=i=>{const c=i.checklist||[];return c.length?c.filter(x=>x.d).leng
 const fchip=f=>`<span class="chip fmt-${esc(f)}">${esc((FORMATS.find(x=>x[0]===f)||[f,f])[1])}</span>`;
 function newItem(over={}){
   const fmt=over.format||"reel";
-  return {id:uid(),title:"",format:fmt,platform:"ig",pillar:"Autoridad",stage:"idea",date:"",time:"",hook:"",script:"",cta:"",keyword:"",notes:"",
+  return {id:uid(),title:"",format:fmt,platforms:["ig","fb"],pillar:"Autoridad",stage:"idea",date:"",time:"",hook:"",script:"",cta:"",keyword:"",notes:"",
     checklist:CHECK[fmt].map(t=>({t,d:false})),metrics:{},createdAt:Date.now(),...over};
 }
 let toastT;
@@ -687,7 +688,7 @@ function renderEditor(){
     <div class="field"><span class="lbl">Etapa</span><div class="stagepick">${STAGES.map(s=>`<button data-stage="${s.id}" aria-pressed="${e.stage===s.id}"><i class="dot st-${s.id}"></i>${s.n.split(" /")[0]}</button>`).join("")}</div></div>
     <div class="fields">
      <div class="field"><label class="lbl" for="e-format">Formato</label><select id="e-format">${opt(FORMATS,e.format)}</select></div>
-     <div class="field"><label class="lbl" for="e-platform">Red</label><select id="e-platform">${opt(PLATFORMS,e.platform)}</select></div>
+     <div class="field" style="grid-column:1/-1"><span class="lbl">Redes</span><div class="stagepick">${PLATFORMS.map(([k,n])=>`<button type="button" data-enet="${k}" aria-pressed="${netsOf(e).includes(k)}">${n}</button>`).join("")}</div></div>
      <div class="field"><label class="lbl" for="e-date">Fecha de publicación</label><input type="date" id="e-date" value="${esc(e.date)}"></div>
      <div class="field"><label class="lbl" for="e-time">Hora</label><input type="time" id="e-time" value="${esc(e.time)}"></div>
      <div class="field" style="grid-column:1/-1"><label class="lbl" for="e-pillar">Pilar</label><select id="e-pillar">${opt(PILLARS.map(p=>[p,p]),e.pillar)}</select></div>
@@ -713,7 +714,7 @@ function renderEditor(){
 function readEditor(){
   const e=S.editing;if(!e)return;
   const v=id=>document.getElementById(id)?.value??"";
-  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),platform:v("e-platform"),date:v("e-date"),time:v("e-time"),pillar:v("e-pillar"),hook:v("e-hook"),script:v("e-script"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
+  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),date:v("e-date"),time:v("e-time"),pillar:v("e-pillar"),hook:v("e-hook"),script:v("e-script"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
   document.querySelectorAll("[data-ckt]").forEach(el=>{const c=e.checklist[+el.dataset.ckt];if(c)c.t=el.value});
   e.metrics=e.metrics||{};document.querySelectorAll("[data-em]").forEach(el=>{const n=el.value.replace(/[^\d.]/g,"");if(n==="")delete e.metrics[el.dataset.em];else e.metrics[el.dataset.em]=+n});
 }
@@ -946,6 +947,7 @@ async function uploadOne(e){
 function resetComposer(){P.files.forEach(f=>URL.revokeObjectURL(f.local));Object.assign(P,{files:[],caption:"",per:{ig:"",fb:"",tiktok:""},when:"now",at:"",itemId:"",busy:false,tt:TT0()})}
 function fillFromItem(id){
   const it=S.items.get(id);P.itemId=id;if(!it)return;
+  const ns=netsOf(it).filter(n=>n in P.nets);if(ns.length)Object.keys(P.nets).forEach(n=>P.nets[n]=ns.includes(n));
   if(!P.caption.trim())P.caption=[it.hook,it.cta,it.keyword?`Comenta "${it.keyword}"`:""].filter(Boolean).join("\n\n");
   if(it.date){const t=it.time||"10:00";const dt=new Date(`${it.date}T${t}`);if(dt>new Date(Date.now()+5*6e4)){P.when="later";P.at=`${it.date}T${t}`}}
 }
@@ -1038,6 +1040,7 @@ document.addEventListener("click",ev=>{
   /* editor */
   if(!S.editing)return;
   if(d.close!==undefined){closeEditor();return}
+  if(d.enet){readEditor();const cur=netsOf(S.editing);S.editing.platforms=cur.includes(d.enet)?cur.filter(x=>x!==d.enet):[...cur,d.enet];delete S.editing.platform;renderEditor();return}
   if(d.stage){readEditor();S.editing.stage=d.stage;renderEditor();return}
   if(d.ckadd!==undefined){readEditor();S.editing.checklist.push({t:"",d:false});renderEditor();const k=S.editing.checklist.length-1;setTimeout(()=>document.getElementById("ckt-"+k)?.focus(),20);return}
   if(d.ckx){readEditor();S.editing.checklist.splice(+d.ckx,1);renderEditor();return}
