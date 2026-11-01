@@ -926,7 +926,9 @@ function openPrompter(id){
   let cur=0;
   const bar=el.querySelector("#pscenes");
   const showScene=()=>{
-    if(!sc.length){t.textContent=[i.hook,i.script,i.cta].filter(Boolean).join("\n\n");return}
+    // Guion completo, seguido: solo la voz de todas las escenas
+    if(sc.length){t.textContent=sc.map(x=>x.voz.trim()).join("\n\n");return}
+    t.textContent=[i.hook,i.script,i.cta].filter(Boolean).join("\n\n");return;
     const x=sc[cur],tag=sceneTag(allSc,x.ix,false);
     t.textContent=x.voz;t.scrollTop=0;
     bar.hidden=false;t.classList.add("byscene");el.querySelector(".guide").hidden=true;
