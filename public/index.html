@@ -427,6 +427,9 @@ async function start(){
   try{await Promise.all([loadItems(),loadSocial()])}catch(e){setSync("Sin conexión")}
   refreshView();
   setInterval(async()=>{if(document.hidden||S.editing||pending.size)return;try{await loadItems();refreshView()}catch(e){}},30000);
+  // Redes "en vivo": cada minuto relee lo guardado; si lo último tiene más de 10 min, pide datos frescos a las redes
+  setInterval(()=>{if(!document.hidden&&S.view==="redes")liveRedes()},60000);
+  if(S.view==="redes")liveRedes();
   document.addEventListener("visibilitychange",async()=>{if(!document.hidden&&!S.editing&&!pending.size){try{await Promise.all([loadItems(),loadSocial()]);refreshView()}catch(e){}}});
 }
 function showLogin(){
@@ -465,7 +468,7 @@ function renderNav(){
   document.getElementById("navlinks").innerHTML=VIEWS.map(([id,n,ic])=>`<button data-view="${id}" aria-current="${S.view===id}">${svg(ic)}${n}</button>`).join("");
   document.getElementById("tabs").innerHTML=VIEWS.map(([id,n,ic])=>`<button data-view="${id}" aria-current="${S.view===id}">${svg(ic)}${n}</button>`).join("");
 }
-function go(v){S.view=v;try{localStorage.setItem("mm_view",v)}catch(e){};if(location.hash!=="#"+v)history.replaceState(null,"","#"+v);render();window.scrollTo(0,0)}
+function go(v){if(v==="redes")setTimeout(liveRedes,0);S.view=v;try{localStorage.setItem("mm_view",v)}catch(e){};if(location.hash!=="#"+v)history.replaceState(null,"","#"+v);render();window.scrollTo(0,0)}
 
 /* ---------- views ---------- */
 function banner(){
@@ -605,6 +608,22 @@ function vMetricas(){
 }
 
 
+
+const SYNC_EVERY=10*6e4;
+function lastSyncAt(){const c=S.conn||{};return Math.min(...[c.meta?.lastSync,c.tiktok?.lastSync].filter(Boolean).concat(Date.now()))}
+async function runSync(silent){
+  if(S.syncing)return;S.syncing=true;refreshView();
+  try{const r=await api("/api/sync",{method:"POST"});await loadSocial();
+    const err=[r.meta?.igError,r.meta?.fbError,r.tiktok?.tiktokError,r.meta?.error,r.tiktok?.error].filter(Boolean)[0];
+    if(!silent)toast(err?"Error: "+err:"Estadísticas actualizadas",err?6000:2400)}
+  catch(e){if(e.message!=="auth"&&!silent)toast("No se pudo actualizar")}
+  finally{S.syncing=false;refreshView()}
+}
+async function liveRedes(){
+  if(S.syncing)return;
+  await loadSocial();refreshView();
+  if((S.conn?.meta||S.conn?.tiktok)&&Date.now()-lastSyncAt()>SYNC_EVERY)runSync(true);
+}
 function vRedes(){
   const c=S.conn||{configured:{}};
   const net=S.redesNet;
@@ -1051,7 +1070,7 @@ document.addEventListener("click",ev=>{
   if(d.mnav!==undefined){const n=+d.mnav;const t0=new Date();S.month=n===0?new Date(t0.getFullYear(),t0.getMonth(),1):new Date(S.month.getFullYear(),S.month.getMonth()+n,1);if(n===0)S.selDay=TODAY;render();return}
   if(d.calfmt){S.calFmt=d.calfmt;render();return}
   if(d.net){S.redesNet=d.net;render();return}
-  if(d.sync!==undefined){S.syncing=true;render();api("/api/sync",{method:"POST"}).then(async r=>{await loadSocial();const err=[r.meta?.igError,r.meta?.fbError,r.tiktok?.tiktokError,r.meta?.error,r.tiktok?.error].filter(Boolean)[0];toast(err?"Error: "+err:"Estadísticas actualizadas",err?6000:2400)}).catch(e=>{if(e.message!=="auth")toast("No se pudo actualizar")}).finally(()=>{S.syncing=false;refreshView()});return}
+  if(d.sync!==undefined){runSync(false);return}
   if(d.disconnect){if(!t.dataset.armed){t.dataset.armed="1";t.textContent="¿Seguro? Toca otra vez";return}api("/api/connections?provider="+d.disconnect,{method:"DELETE"}).then(loadSocial).then(()=>{toast("Desconectado");render()}).catch(()=>toast("No se pudo desconectar"));return}
   if(d.cell){if(window.matchMedia("(max-width:860px)").matches||S.selDay===d.cell&&false){S.selDay=d.cell;render()}else{if(S.selDay===d.cell)openEditor(null,{date:d.cell});else{S.selDay=d.cell;render()}}return}
   if(d.day){openEditor(null,{date:d.day});return}
