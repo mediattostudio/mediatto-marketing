@@ -213,6 +213,8 @@ tr:last-child td{border-bottom:0}
 .ck input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px;flex:none}
 .ck input[type=text]{flex:1;border:0;background:none;padding:2px;min-width:0}
 .ck.done input[type=text]{text-decoration:line-through;color:var(--muted)}
+.ck.shot .sn{font-family:var(--f-mono);font-size:11px;color:var(--muted);min-width:14px;text-align:right}
+.ck.shot select{border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:3px 4px;font-size:12px;max-width:110px}
 .ck .x{border:0;background:none;color:var(--muted);padding:0 4px;font-size:16px}
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 details summary{cursor:pointer;font-weight:600;font-size:13px;padding:4px 0}
@@ -343,6 +345,7 @@ const STAGES=[
 const SN=Object.fromEntries(STAGES.map(s=>[s.id,s.n]));
 const FORMATS=[["reel","Reel"],["carrusel","Carrusel"],["post","Post"],["story","Story"]];
 const PLATFORMS=[["ig","Instagram"],["fb","Facebook"],["tiktok","TikTok"],["yt","YouTube"]];
+const DATE_STAGES=["listo","publicado"],SHOT_FORMATS=["reel","story"],SHOT_TYPES=["A-roll","B-roll","Detalle","Antes/después","Timelapse"];
 const netsOf=i=>Array.isArray(i.platforms)&&i.platforms.length?i.platforms:(i.platform?[i.platform]:[]);
 const PILLARS=["Autoridad","Autenticidad","Crecimiento","Creencia"];
 const CHECK={
@@ -726,12 +729,18 @@ function renderEditor(){
     <div class="fields">
      <div class="field"><label class="lbl" for="e-format">Formato</label><select id="e-format">${opt(FORMATS,e.format)}</select></div>
      <div class="field" style="grid-column:1/-1"><span class="lbl">Redes</span><div class="stagepick">${PLATFORMS.map(([k,n])=>`<button type="button" data-enet="${k}" aria-pressed="${netsOf(e).includes(k)}">${n}</button>`).join("")}</div></div>
-     <div class="field"><label class="lbl" for="e-date">Fecha de publicación</label><input type="date" id="e-date" value="${esc(e.date)}"></div>
-     <div class="field"><label class="lbl" for="e-time-h">Hora</label>${timePick("e-time",e.time,true)}</div>
+     ${DATE_STAGES.includes(e.stage)?`<div class="field"><label class="lbl" for="e-date">Fecha de publicación</label><input type="date" id="e-date" value="${esc(e.date)}"></div>
+     <div class="field"><label class="lbl" for="e-time-h">Hora</label>${timePick("e-time",e.time,true)}</div>`:`<div class="field" style="grid-column:1/-1"><span class="lbl">Fecha de publicación</span><span class="words">Se asigna cuando la pieza pase a <b>Listo</b>.${e.date?` Fecha tentativa guardada: ${fmtShort(e.date)}.`:""}</span></div>`}
      <div class="field" style="grid-column:1/-1"><label class="lbl" for="e-pillar">Pilar</label><select id="e-pillar">${opt(PILLARS.map(p=>[p,p]),e.pillar)}</select></div>
     </div>
-    <div class="field"><label class="lbl" for="e-hook">Hook</label><textarea id="e-hook" rows="2" placeholder="La frase de los primeros 3 segundos">${esc(e.hook)}</textarea></div>
+    <div class="fields">
+     <div class="field"><label class="lbl" for="e-hook">Gancho hablado / texto</label><textarea id="e-hook" rows="3" placeholder="La frase de los primeros 3 segundos">${esc(e.hook)}</textarea></div>
+     <div class="field"><label class="lbl" for="e-vhook">Gancho visual</label><textarea id="e-vhook" rows="3" placeholder="${e.format==="carrusel"?"Qué se ve en la portada":"Qué se ve en el primer segundo: close-up del taladro, antes/después, movimiento de cámara…"}">${esc(e.vhook)}</textarea></div>
+    </div>
     <div class="field"><label class="lbl" for="e-script">Guion / copy</label><textarea id="e-script" rows="7" placeholder="Guion completo o copy de las slides">${esc(e.script)}</textarea></div>
+    ${SHOT_FORMATS.includes(e.format)?`<div class="field"><span class="lbl" style="display:flex;justify-content:space-between"><span>Tomas</span><span>${(e.shots||[]).filter(x=>x.d).length}/${(e.shots||[]).length} grabadas</span></span>
+     <div class="check">${(e.shots||[]).map((c,k)=>`<div class="ck shot ${c.d?"done":""}"><b class="sn">${k+1}</b><input type="checkbox" id="sh-${k}" data-sh="${k}" ${c.d?"checked":""} aria-label="Grabada"><input type="text" id="sht-${k}" data-sht="${k}" value="${esc(c.t)}" placeholder="Qué se graba (encuadre, acción)"><select id="shk-${k}" data-shk="${k}" aria-label="Tipo">${SHOT_TYPES.map(x=>`<option ${c.k===x?"selected":""}>${x}</option>`).join("")}</select><button class="x" data-shx="${k}" aria-label="Quitar">×</button></div>`).join("")}
+      <button class="btn ghost" style="align-self:flex-start" data-shadd>+ Agregar toma</button></div></div>`:""}
     <div class="fields"><div class="field"><label class="lbl" for="e-cta">CTA</label><input id="e-cta" value="${esc(e.cta)}"></div>
      <div class="field"><label class="lbl" for="e-keyword">Keyword</label><input id="e-keyword" value="${esc(e.keyword)}" placeholder="ANTICIPO"></div></div>
     <div class="field"><span class="lbl" style="display:flex;justify-content:space-between"><span>Checklist de producción</span><span>${(e.checklist||[]).filter(x=>x.d).length}/${(e.checklist||[]).length}</span></span>
@@ -751,8 +760,10 @@ function renderEditor(){
 function readEditor(){
   const e=S.editing;if(!e)return;
   const v=id=>document.getElementById(id)?.value??"";
-  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),date:v("e-date"),time:readTime("e-time"),pillar:v("e-pillar"),hook:v("e-hook"),script:v("e-script"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
+  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),...(document.getElementById("e-date")?{date:v("e-date"),time:readTime("e-time")}:{}),pillar:v("e-pillar"),hook:v("e-hook"),vhook:v("e-vhook"),script:v("e-script"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
   document.querySelectorAll("[data-ckt]").forEach(el=>{const c=e.checklist[+el.dataset.ckt];if(c)c.t=el.value});
+  document.querySelectorAll("[data-sht]").forEach(el=>{const c=(e.shots||[])[+el.dataset.sht];if(c)c.t=el.value});
+  document.querySelectorAll("[data-shk]").forEach(el=>{const c=(e.shots||[])[+el.dataset.shk];if(c)c.k=el.value});
   e.metrics=e.metrics||{};document.querySelectorAll("[data-em]").forEach(el=>{const n=el.value.replace(/[^\d.]/g,"");if(n==="")delete e.metrics[el.dataset.em];else e.metrics[el.dataset.em]=+n});
 }
 function closeEditor(){S.editing=null;renderEditor();render()}
@@ -1079,6 +1090,8 @@ document.addEventListener("click",ev=>{
   if(d.close!==undefined){closeEditor();return}
   if(d.enet){readEditor();const cur=netsOf(S.editing);S.editing.platforms=cur.includes(d.enet)?cur.filter(x=>x!==d.enet):[...cur,d.enet];delete S.editing.platform;renderEditor();return}
   if(d.stage){readEditor();S.editing.stage=d.stage;renderEditor();return}
+  if(d.shadd!==undefined){readEditor();(S.editing.shots=S.editing.shots||[]).push({t:"",k:"A-roll",d:false});renderEditor();const k=S.editing.shots.length-1;setTimeout(()=>document.getElementById("sht-"+k)?.focus(),20);return}
+  if(d.shx){readEditor();S.editing.shots.splice(+d.shx,1);renderEditor();return}
   if(d.ckadd!==undefined){readEditor();S.editing.checklist.push({t:"",d:false});renderEditor();const k=S.editing.checklist.length-1;setTimeout(()=>document.getElementById("ckt-"+k)?.focus(),20);return}
   if(d.ckx){readEditor();S.editing.checklist.splice(+d.ckx,1);renderEditor();return}
   if(d.save!==undefined){readEditor();const e=S.editing;if(!e.title)e.title=e.hook?e.hook.slice(0,60):"Sin título";persist(e,true);toast(S.editingIsNew?"Pieza creada":"Guardado");closeEditor();return}
@@ -1088,6 +1101,7 @@ document.addEventListener("change",ev=>{
   const el=ev.target;
   if(el.id==="e-format"&&S.editing){readEditor();const e=S.editing;const untouched=e.checklist.every(c=>!c.d);e.format=el.value;if(untouched)e.checklist=CHECK[e.format].map(t=>({t,d:false}));renderEditor();return}
   if(el.id==="e-linked"&&S.editing){readEditor();const p=postById(el.value);if(p){S.editing.stage="publicado";if(!S.editing.date&&p.postedAt)S.editing.date=localDay(p.postedAt)}renderEditor();return}
+  if(el.dataset.sh!==undefined&&S.editing){readEditor();S.editing.shots[+el.dataset.sh].d=el.checked;renderEditor();return}
   if(el.dataset.ck!==undefined&&S.editing){readEditor();const c=S.editing.checklist[+el.dataset.ck];c.d=el.checked;
     if(c.d&&/program/i.test(c.t)&&["idea","guion","grabar","editar"].includes(S.editing.stage))S.editing.stage="listo";renderEditor();return}
   if(el.dataset.metric){const it=S.items.get(el.dataset.metric);if(!it)return;const v=el.value.replace(/[^\d.]/g,"");const m={...(it.metrics||{})};if(v==="")delete m[el.dataset.k];else m[el.dataset.k]=+v;persist({...it,metrics:m});render();return}
