@@ -164,7 +164,7 @@ main{min-width:0;padding-block:26px 40px;padding-left:max(28px,env(safe-area-ins
 .card.ins-before{box-shadow:0 -3px 0 0 var(--gold)}
 .col.ins-end .add{border-color:var(--gold);border-style:solid}
 .card.dragging{opacity:.35}
-.ghost{position:fixed;z-index:90;pointer-events:none;transform:rotate(2deg);box-shadow:0 12px 28px rgba(0,0,0,.35);opacity:.95}
+.dragghost{position:fixed;z-index:90;pointer-events:none;transform:rotate(2deg);box-shadow:0 12px 28px rgba(0,0,0,.35);opacity:.95}
 .card,.mini{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .col header{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 6px;font-family:var(--f-display);font-weight:700;font-size:12.5px}
 .col header span{font-family:var(--f-mono);font-size:11px;color:var(--muted);font-weight:500}
@@ -1323,7 +1323,7 @@ document.addEventListener("dragend",()=>{dragId=null;clearDrop()});
   document.addEventListener("pointerdown",ev=>{if(ev.pointerType==="mouse")return;const t=ev.target.closest("[data-drag]");if(!t)return;
     start={x:ev.clientX,y:ev.clientY};src=t;
     timer=setTimeout(()=>{active=true;dragId=t.dataset.drag;dragKind=t.dataset.dk||"pub";
-      const r=t.getBoundingClientRect();ghost=t.cloneNode(true);ghost.classList.add("ghost");ghost.style.width=r.width+"px";ghost.style.left=r.left+"px";ghost.style.top=r.top+"px";
+      const r=t.getBoundingClientRect();ghost=t.cloneNode(true);ghost.classList.add("dragghost");ghost.style.width=r.width+"px";ghost.style.left=r.left+"px";ghost.style.top=r.top+"px";
       ghost.dataset.dx=start.x-r.left;ghost.dataset.dy=start.y-r.top;document.body.appendChild(ghost);t.classList.add("dragging");try{navigator.vibrate?.(15)}catch(e){}},350)},{passive:true});
   document.addEventListener("pointermove",ev=>{if(!start)return;
     if(!active){if(Math.hypot(ev.clientX-start.x,ev.clientY-start.y)>10)cancel();return}
