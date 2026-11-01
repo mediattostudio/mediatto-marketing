@@ -194,6 +194,53 @@ tr:last-child td{border-bottom:0}
 .scrim{position:fixed;inset:0;background:rgba(10,10,9,.45);z-index:40;backdrop-filter:blur(2px)}
 .sheet{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--bg);z-index:50;display:flex;flex-direction:column;border-left:1px solid var(--line);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px);animation:slide .22s ease}
 .sheet.still{animation:none}
+.sheet{width:min(720px,100%)}
+.scenes{display:flex;flex-direction:column;gap:10px}
+.scene{background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.scene.first{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.scene .sh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.scene .sh b{font:900 15px var(--f-display)}
+.scene .sh small{font:500 9.5px var(--f-mono);letter-spacing:.08em;color:var(--gold);text-transform:uppercase}
+.scene .tm{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.scene .dur{display:flex;align-items:center;gap:3px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.scene .dur input{width:46px;border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:3px 5px;text-align:right}
+.scene .gr{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.scene .gr input{accent-color:var(--gold);width:16px;height:16px}
+.scene .grow{flex:1}
+.scene .x{border:0;background:none;color:var(--muted);padding:0 4px;font-size:15px}
+.scene .x:disabled{opacity:.3}
+.scene .sf{display:flex;flex-direction:column;gap:4px;min-width:0}
+.scene .sf>span{font:500 10px var(--f-mono);letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.scene textarea,.scene select{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--surface);width:100%;min-width:0;resize:vertical;line-height:1.45}
+.scene .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.shotlist{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.shotlist summary{font-weight:600;cursor:pointer}
+.shotlist .grp{font:500 10px var(--f-mono);color:var(--gold);letter-spacing:.1em;margin:10px 0 4px;text-transform:uppercase}
+.shotlist .li{display:flex;gap:8px;align-items:center;padding:4px 0;font-size:13px}
+.shotlist .li input{accent-color:var(--gold);width:16px;height:16px;flex:none}
+.shotlist .li.done{color:var(--muted);text-decoration:line-through}
+.av{display:flex;flex-direction:column;gap:8px}
+.avmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.avh,.avr{display:grid;grid-template-columns:34px 64px 1.2fr 1.2fr 1fr 22px;gap:10px;align-items:start}
+.avh.sl,.avr.sl{grid-template-columns:34px 1fr 1fr}
+.avh{padding:0 10px}
+.avr{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px}
+.avr.first{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.avr .n{font:900 14px var(--f-display);display:flex;flex-direction:column}.avr .n small{font:500 9px var(--f-mono);color:var(--gold);letter-spacing:.06em;text-transform:uppercase}
+.avr .tm{font-family:var(--f-mono);font-size:11px;color:var(--muted);padding-top:2px}
+.avr .c{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:13.5px}
+.avr .c .k{display:none}
+.avr .ost{font:700 12.5px var(--f-display);background:var(--gold-soft);border-radius:6px;padding:4px 7px;align-self:flex-start}
+.avr .ok{color:var(--gold);font-weight:700}
+@media (max-width:860px){
+ .scene .two{grid-template-columns:1fr}
+ .avh{display:none}
+ .avr,.avr.sl{grid-template-columns:30px 1fr 22px;grid-template-areas:"n t o" "v v v" "s s s" "x x x"}
+ .avr .n{grid-area:n}.avr .tm{grid-area:t}.avr .ok{grid-area:o}.avr .cv{grid-area:v}.avr .cs{grid-area:s}.avr .co{grid-area:x}
+ .avr.sl{grid-template-areas:"n n n" "s s s" "x x x"}
+ .avr .c .k{display:block;font:500 9.5px var(--f-mono);letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+}
+
 @keyframes slide{from{transform:translateX(30px);opacity:.4}}
 .sheet header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
 .sheet .scroll{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;flex:1}
@@ -549,6 +596,17 @@ function vPipeline(){
      return `<section class="col" data-col="${s.id}"><header><span style="display:flex;gap:7px;align-items:center;font-family:var(--f-display);font-weight:700;font-size:12.5px;color:var(--ink)"><i class="dot st-${s.id}"></i>${s.n}</span><span>${its.length}</span></header>
        ${its.map(card).join("")}<button class="add" data-newstage="${s.id}">+ Agregar</button></section>`}).join("")}</div>`;
 }
+
+function avTable(i){
+  const sc=i.scenes,sl=isSlides(i),times=sceneTimes(sc);
+  return `<div class="av"><div class="avmeta words">${sl?`${sc.length} slides`:`~${totalDur(sc)} s · ${sc.length} escenas · ${sc.filter(x=>x.toma&&x.d).length}/${sc.filter(x=>x.toma).length} tomas grabadas`} · <button class="btn ghost" data-open="${i.id}" style="padding:2px 8px">Editar escenas</button></div>
+   <div class="avh lbl ${sl?"sl":""}"><span>#</span>${sl?"":"<span>Tiempo</span><span>🎙 Voz</span>"}<span>${sl?"🖼 Visual":"🎥 Toma"}</span><span>🔤 ${sl?"Texto de la slide":"Texto en pantalla"}</span>${sl?"":"<span>✓</span>"}</div>
+   ${sc.map((x,k)=>`<div class="avr ${sl?"sl":""} ${k===0?"first":""}"><div class="n">${k+1}${sceneTag(sc,k,sl)?`<small>${sceneTag(sc,k,sl)}</small>`:""}</div>
+    ${sl?"":`<div class="tm">${times[k]}</div><div class="c cv"><span class="k">🎙 Voz</span>${esc(x.voz)||'<span class="words">—</span>'}</div>`}
+    <div class="c cs"><span class="k">${sl?"🖼 Visual":"🎥 Toma"}</span>${esc(x.toma)||'<span class="words">—</span>'}${!sl&&x.toma?`<span class="chip" style="align-self:flex-start">${esc(x.k)}</span>`:""}</div>
+    <div class="c co"><span class="k">🔤 Texto</span>${x.ost?`<span class="ost">${esc(x.ost)}</span>`:'<span class="words">—</span>'}</div>
+    ${sl?"":`<div class="ok">${x.toma?(x.d?"✓":"○"):""}</div>`}</div>`).join("")}</div>`;
+}
 function vGuiones(){
   const q=S.q.toLowerCase();
   const items=all().filter(i=>i.format!=="post").filter(i=>!q||(i.title+i.hook+i.script).toLowerCase().includes(q)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
@@ -563,9 +621,9 @@ function vGuiones(){
       <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><button class="btn ghost back-only" data-scriptback>‹ Guiones</button>
        <div class="tools"><button class="btn" data-open="${cur.id}">Detalles</button><button class="btn primary" data-prompter="${cur.id}">▶ Teleprompter</button></div></div>
       <input class="f-title" id="s-title" value="${esc(cur.title)}" placeholder="Título interno">
-      <div><div class="lbl">Hook · primeros 3 segundos</div><textarea class="hook" id="s-hook" rows="2" placeholder="La frase que detiene el scroll">${esc(cur.hook)}</textarea></div>
+      ${Array.isArray(cur.scenes)&&cur.scenes.length?avTable(cur):`<div><div class="lbl">Hook · primeros 3 segundos</div><textarea class="hook" id="s-hook" rows="2" placeholder="La frase que detiene el scroll">${esc(cur.hook)}</textarea></div>
       <div><div class="lbl" style="display:flex;justify-content:space-between"><span>Guion</span><span class="words">${words} palabras · ~${Math.max(1,Math.round(words/2.6))} s</span></div>
-       <textarea class="body" id="s-script" placeholder="Escribe el guion. Una idea por línea facilita grabar por tomas.">${esc(cur.script)}</textarea></div>
+       <textarea class="body" id="s-script" placeholder="Escribe el guion. Una idea por línea facilita grabar por tomas.">${esc(cur.script)}</textarea></div>`}
       <div class="fields"><div class="field"><span class="lbl">CTA</span><input id="s-cta" value="${esc(cur.cta)}" placeholder="Comenta la palabra…"></div>
        <div class="field"><span class="lbl">Keyword</span><input id="s-keyword" value="${esc(cur.keyword)}" placeholder="ANTICIPO"></div></div>
     </article>`:`<article class="sdoc" style="align-items:center;justify-content:center;color:var(--muted)">Elige un guion de la lista.</article>`}
@@ -695,6 +753,58 @@ function vRedes(){
 }
 
 
+
+/* ---------- guion por escenas ---------- */
+const SCENE_FORMATS=["reel","story","carrusel"];
+const isSlides=i=>i.format==="carrusel";
+function scenesOf(i){
+  if(Array.isArray(i.scenes)&&i.scenes.length)return i.scenes;
+  const sc=[];const blank=()=>({voz:"",toma:"",k:"A-roll",ost:"",dur:5,d:false});
+  if(i.hook||i.vhook)sc.push({...blank(),voz:i.hook||"",toma:i.vhook||"",k:"Detalle",dur:3});
+  let paras=(i.script||"").split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean);
+  if(paras.length===1)paras=paras[0].split(/\n/).map(x=>x.trim()).filter(Boolean);
+  paras.forEach(t=>sc.push({...blank(),voz:t}));
+  (i.shots||[]).forEach(sh=>{const free=sc.find((x,ix)=>ix>0&&!x.toma);if(free){free.toma=sh.t;free.k=sh.k||"A-roll";free.d=!!sh.d}else sc.push({...blank(),toma:sh.t,k:sh.k||"A-roll",d:!!sh.d})});
+  if(!sc.length)sc.push({...blank(),k:"Detalle",dur:3});
+  return sc;
+}
+function syncDerived(e){
+  const sc=e.scenes||[];if(!sc.length)return;
+  if(isSlides(e)){e.hook=sc[0].ost||"";e.vhook=sc[0].toma||"";e.script=sc.map((x,k)=>`Slide ${k+1}: ${x.ost||""}`).join("\n");e.shots=[];return}
+  e.hook=sc[0].voz||"";e.vhook=sc[0].toma||"";
+  e.script=sc.slice(1).map(x=>x.voz).filter(Boolean).join("\n\n");
+  e.shots=sc.filter(x=>x.toma).map(x=>({t:x.toma,k:x.k,d:!!x.d}));
+}
+const totalDur=sc=>sc.reduce((a,x)=>a+(+x.dur||0),0);
+function sceneTimes(sc){let t=0;return sc.map(x=>{const a=t;t+=(+x.dur||0);return `${a}–${t} s`})}
+function sceneTag(sc,k,slides){if(k===0)return slides?"Portada":"Gancho";if(k===sc.length-1&&sc.length>1)return slides?"Cierre":"CTA";return ""}
+function sceneEditor(e){
+  const sc=e.scenes,sl=isSlides(e),times=sceneTimes(sc),done=sc.filter(x=>x.toma&&x.d).length,withShot=sc.filter(x=>x.toma).length;
+  const card=(x,k)=>`<div class="scene ${k===0?"first":""}">
+   <div class="sh"><b>${k+1}</b>${sceneTag(sc,k,sl)?`<small>${sceneTag(sc,k,sl)}</small>`:""}
+    ${sl?"":`<span class="tm">${times[k]}</span><label class="dur"><input id="scs-${k}" data-scs="${k}" type="number" min="1" max="120" inputmode="numeric" value="${+x.dur||""}" aria-label="Segundos">s</label>`}
+    <span class="grow"></span>
+    ${sl?"":`<label class="gr"><input type="checkbox" id="scd-${k}" data-scd="${k}" ${x.d?"checked":""}>Grabada</label>`}
+    <button class="x" data-scm="${k}:-1" aria-label="Subir" ${k===0?"disabled":""}>↑</button><button class="x" data-scm="${k}:1" aria-label="Bajar" ${k===sc.length-1?"disabled":""}>↓</button><button class="x" data-scx="${k}" aria-label="Quitar">×</button></div>
+   ${sl?"":`<label class="sf"><span>🎙 Voz</span><textarea id="scv-${k}" data-scv="${k}" rows="2" placeholder="${k===0?"La frase de los primeros 3 segundos":"Lo que dices"}">${esc(x.voz)}</textarea></label>`}
+   <div class="two">
+    <label class="sf"><span>${sl?"🖼 Visual":"🎥 Toma"}</span><textarea id="sct-${k}" data-sct="${k}" rows="2" placeholder="${sl?"Foto o gráfico de la slide":k===0?"Qué se ve en el primer segundo":"Qué se ve: encuadre, acción"}">${esc(x.toma)}</textarea>
+     ${sl?"":`<select id="sck-${k}" data-sck="${k}" aria-label="Tipo de toma">${SHOT_TYPES.map(t=>`<option ${x.k===t?"selected":""}>${t}</option>`).join("")}</select>`}</label>
+    <label class="sf"><span>🔤 ${sl?"Texto de la slide":"Texto en pantalla"}</span><textarea id="sco-${k}" data-sco="${k}" rows="2" placeholder="${sl?"Lo que dice la slide":"Texto sobre el video"}">${esc(x.ost)}</textarea></label>
+   </div></div>`;
+  const groups=SHOT_TYPES.map(t=>[t,sc.map((x,k)=>({...x,ix:k})).filter(x=>x.toma&&x.k===t)]).filter(g=>g[1].length);
+  return `<div class="field"><span class="lbl" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>${sl?"Slides":"Guion por escenas"}</span><span>${sl?`${sc.length} slides`:`~${totalDur(sc)} s · ${sc.length} escenas · ${done}/${withShot} grabadas`}</span></span>
+   <div class="scenes">${sc.map(card).join("")}</div>
+   <button class="btn ghost" style="align-self:flex-start" data-scadd>+ Agregar ${sl?"slide":"escena"}</button></div>
+   ${sl||!groups.length?"":`<details class="shotlist"><summary>Lista para grabar · ${done}/${withShot}</summary>${groups.map(([t,xs])=>`<div class="grp">${esc(t)}</div>${xs.map(x=>`<label class="li ${x.d?"done":""}"><input type="checkbox" data-scd="${x.ix}" ${x.d?"checked":""}>${esc(x.toma)} <span class="words">· esc. ${x.ix+1}</span></label>`).join("")}`).join("")}</details>`}`;
+}
+function readScenes(e){
+  if(!document.querySelector("[data-scv],[data-sct]"))return;
+  const g=(a,k)=>document.getElementById(`${a}-${k}`);
+  e.scenes=e.scenes.map((x,k)=>({...x,voz:g("scv",k)?.value??x.voz,toma:g("sct",k)?.value??x.toma,k:g("sck",k)?.value??x.k,ost:g("sco",k)?.value??x.ost,dur:g("scs",k)?(+g("scs",k).value||0):x.dur}));
+  syncDerived(e);
+}
+
 /* selector de hora: hora · minutos · a.m./p.m. (más fácil que el campo nativo en Safari/iPhone) */
 function timePick(pre,val,allowEmpty){
   let h24=null,m=0;if(/^\d{1,2}:\d{2}/.test(val||"")){[h24,m]=val.split(":").map(Number)}
@@ -719,6 +829,7 @@ function openEditor(id,over){
 function renderEditor(){
   const e=S.editing,ov=document.getElementById("overlay");
   if(!e){ov.innerHTML="";return}
+  if(SCENE_FORMATS.includes(e.format)&&!(e.scenes&&e.scenes.length))e.scenes=scenesOf(e);
   const opt=(arr,v)=>arr.map(([k,n])=>`<option value="${k}" ${k===v?"selected":""}>${n}</option>`).join("");
   // Si la ventana ya estaba abierta, conservamos la posición y no repetimos la animación
   const prevScroll=ov.querySelector(".sheet .scroll"),reopen=!!prevScroll,keepTop=prevScroll?prevScroll.scrollTop:0;
@@ -736,14 +847,8 @@ function renderEditor(){
      <div class="field"><label class="lbl" for="e-time-h">Hora</label>${timePick("e-time",e.time,true)}</div>`:`<div class="field" style="grid-column:1/-1"><span class="lbl">Fecha de publicación</span><span class="words">Se asigna cuando la pieza pase a <b>Listo</b>.${e.date?` Fecha tentativa guardada: ${fmtShort(e.date)}.`:""}</span></div>`}
      <div class="field" style="grid-column:1/-1"><label class="lbl" for="e-pillar">Pilar</label><select id="e-pillar">${opt(PILLARS.map(p=>[p,p]),e.pillar)}</select></div>
     </div>
-    <div class="fields">
-     <div class="field"><label class="lbl" for="e-hook">Gancho hablado / texto</label><textarea id="e-hook" rows="3" placeholder="La frase de los primeros 3 segundos">${esc(e.hook)}</textarea></div>
-     <div class="field"><label class="lbl" for="e-vhook">Gancho visual</label><textarea id="e-vhook" rows="3" placeholder="${e.format==="carrusel"?"Qué se ve en la portada":"Qué se ve en el primer segundo: close-up del taladro, antes/después, movimiento de cámara…"}">${esc(e.vhook)}</textarea></div>
-    </div>
-    <div class="field"><label class="lbl" for="e-script">Guion / copy</label><textarea id="e-script" rows="7" placeholder="Guion completo o copy de las slides">${esc(e.script)}</textarea></div>
-    ${SHOT_FORMATS.includes(e.format)?`<div class="field"><span class="lbl" style="display:flex;justify-content:space-between"><span>Tomas</span><span>${(e.shots||[]).filter(x=>x.d).length}/${(e.shots||[]).length} grabadas</span></span>
-     <div class="check">${(e.shots||[]).map((c,k)=>`<div class="ck shot ${c.d?"done":""}"><b class="sn">${k+1}</b><input type="checkbox" id="sh-${k}" data-sh="${k}" ${c.d?"checked":""} aria-label="Grabada"><input type="text" id="sht-${k}" data-sht="${k}" value="${esc(c.t)}" placeholder="Qué se graba (encuadre, acción)"><select id="shk-${k}" data-shk="${k}" aria-label="Tipo">${SHOT_TYPES.map(x=>`<option ${c.k===x?"selected":""}>${x}</option>`).join("")}</select><button class="x" data-shx="${k}" aria-label="Quitar">×</button></div>`).join("")}
-      <button class="btn ghost" style="align-self:flex-start" data-shadd>+ Agregar toma</button></div></div>`:""}
+    ${SCENE_FORMATS.includes(e.format)?sceneEditor(e):`<div class="field"><label class="lbl" for="e-hook">Gancho / primera línea</label><textarea id="e-hook" rows="2">${esc(e.hook)}</textarea></div>
+    <div class="field"><label class="lbl" for="e-script">Copy</label><textarea id="e-script" rows="6">${esc(e.script)}</textarea></div>`}
     <div class="fields"><div class="field"><label class="lbl" for="e-cta">CTA</label><input id="e-cta" value="${esc(e.cta)}"></div>
      <div class="field"><label class="lbl" for="e-keyword">Keyword</label><input id="e-keyword" value="${esc(e.keyword)}" placeholder="ANTICIPO"></div></div>
     <div class="field"><span class="lbl" style="display:flex;justify-content:space-between"><span>Checklist de producción</span><span>${(e.checklist||[]).filter(x=>x.d).length}/${(e.checklist||[]).length}</span></span>
@@ -764,8 +869,10 @@ function renderEditor(){
 function readEditor(){
   const e=S.editing;if(!e)return;
   const v=id=>document.getElementById(id)?.value??"";
-  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),...(document.getElementById("e-date")?{date:v("e-date"),time:readTime("e-time")}:{}),pillar:v("e-pillar"),hook:v("e-hook"),vhook:v("e-vhook"),script:v("e-script"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
+  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),...(document.getElementById("e-date")?{date:v("e-date"),time:readTime("e-time")}:{}),pillar:v("e-pillar"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
   document.querySelectorAll("[data-ckt]").forEach(el=>{const c=e.checklist[+el.dataset.ckt];if(c)c.t=el.value});
+  if(document.getElementById("e-hook")){e.hook=v("e-hook");e.script=v("e-script")}
+  if(e.scenes)readScenes(e);
   document.querySelectorAll("[data-sht]").forEach(el=>{const c=(e.shots||[])[+el.dataset.sht];if(c)c.t=el.value});
   document.querySelectorAll("[data-shk]").forEach(el=>{const c=(e.shots||[])[+el.dataset.shk];if(c)c.k=el.value});
   e.metrics=e.metrics||{};document.querySelectorAll("[data-em]").forEach(el=>{const n=el.value.replace(/[^\d.]/g,"");if(n==="")delete e.metrics[el.dataset.em];else e.metrics[el.dataset.em]=+n});
@@ -784,7 +891,7 @@ function openPrompter(id){
    <div class="tools"><button class="btn" data-pfs="-4">A−</button><button class="btn" data-pfs="4">A+</button><button class="btn" data-psp="-0.4">Lento</button><button class="btn" data-psp="0.4">Rápido</button><button class="btn" data-pmir>Espejo</button><button class="btn" style="background:#C9A84C;color:#1A1A1A;border-color:#C9A84C" data-pplay>▶ Iniciar</button></div></div>
    <div class="ptext" id="ptext"></div><div class="guide"></div>`;
   document.body.appendChild(el);
-  const t=el.querySelector("#ptext");t.textContent=[i.hook,i.script,i.cta].filter(Boolean).join("\n\n");
+  const t=el.querySelector("#ptext");t.textContent=(Array.isArray(i.scenes)&&i.scenes.length&&!isSlides(i))?i.scenes.map(x=>x.voz).filter(Boolean).join("\n\n"):[i.hook,i.script,i.cta].filter(Boolean).join("\n\n");
   const apply=()=>{t.style.fontSize=size+"px";t.classList.toggle("mirror",mirror)};apply();
   let acc=0;const step=()=>{acc+=speed;if(acc>=1){t.scrollTop+=Math.floor(acc);acc-=Math.floor(acc)}raf=requestAnimationFrame(step)};
   const play=b=>{playing=b;el.querySelector("[data-pplay]").textContent=b?"❚❚ Pausa":"▶ Iniciar";cancelAnimationFrame(raf);if(b)raf=requestAnimationFrame(step)};
@@ -1094,6 +1201,9 @@ document.addEventListener("click",ev=>{
   if(d.close!==undefined){closeEditor();return}
   if(d.enet){readEditor();const cur=netsOf(S.editing);S.editing.platforms=cur.includes(d.enet)?cur.filter(x=>x!==d.enet):[...cur,d.enet];delete S.editing.platform;renderEditor();return}
   if(d.stage){readEditor();S.editing.stage=d.stage;renderEditor();return}
+  if(d.scadd!==undefined){readEditor();const sl=isSlides(S.editing);S.editing.scenes.push({voz:"",toma:"",k:sl?"":"A-roll",ost:"",dur:5,d:false});renderEditor();const k=S.editing.scenes.length-1;setTimeout(()=>(el=>{if(el){el.focus({preventScroll:true});el.closest(".scene").scrollIntoView({block:"nearest"})}})(document.getElementById((sl?"sco-":"scv-")+k)),20);return}
+  if(d.scx){readEditor();if(S.editing.scenes.length>1)S.editing.scenes.splice(+d.scx,1);syncDerived(S.editing);renderEditor();return}
+  if(d.scm){readEditor();const [k,dir]=d.scm.split(":").map(Number),a=S.editing.scenes,j=k+dir;if(j>=0&&j<a.length){[a[k],a[j]]=[a[j],a[k]]}syncDerived(S.editing);renderEditor();return}
   if(d.shadd!==undefined){readEditor();(S.editing.shots=S.editing.shots||[]).push({t:"",k:"A-roll",d:false});renderEditor();const k=S.editing.shots.length-1;setTimeout(()=>(el=>{if(el){el.focus({preventScroll:true});el.scrollIntoView({block:"nearest"})}})(document.getElementById("sht-"+k)),20);return}
   if(d.shx){readEditor();S.editing.shots.splice(+d.shx,1);renderEditor();return}
   if(d.ckadd!==undefined){readEditor();S.editing.checklist.push({t:"",d:false});renderEditor();const k=S.editing.checklist.length-1;setTimeout(()=>(el=>{if(el){el.focus({preventScroll:true});el.scrollIntoView({block:"nearest"})}})(document.getElementById("ckt-"+k)),20);return}
@@ -1103,8 +1213,10 @@ document.addEventListener("click",ev=>{
 });
 document.addEventListener("change",ev=>{
   const el=ev.target;
-  if(el.id==="e-format"&&S.editing){readEditor();const e=S.editing;const untouched=e.checklist.every(c=>!c.d);e.format=el.value;if(untouched)e.checklist=CHECK[e.format].map(t=>({t,d:false}));renderEditor();return}
+  if(el.id==="e-format"&&S.editing){readEditor();const e=S.editing;const untouched=e.checklist.every(c=>!c.d);e.format=el.value;if(e.scenes&&!SCENE_FORMATS.includes(e.format)){syncDerived(e)}if(untouched)e.checklist=CHECK[e.format].map(t=>({t,d:false}));renderEditor();return}
   if(el.id==="e-linked"&&S.editing){readEditor();const p=postById(el.value);if(p){S.editing.stage="publicado";if(!S.editing.date&&p.postedAt)S.editing.date=localDay(p.postedAt)}renderEditor();return}
+  if(el.dataset.scd!==undefined&&S.editing){readEditor();S.editing.scenes[+el.dataset.scd].d=el.checked;syncDerived(S.editing);renderEditor();return}
+  if(el.dataset.scs!==undefined&&S.editing){readEditor();renderEditor();return}
   if(el.dataset.sh!==undefined&&S.editing){readEditor();S.editing.shots[+el.dataset.sh].d=el.checked;renderEditor();return}
   if(el.dataset.ck!==undefined&&S.editing){readEditor();const c=S.editing.checklist[+el.dataset.ck];c.d=el.checked;
     if(c.d&&/program/i.test(c.t)&&["idea","guion","grabar","editar"].includes(S.editing.stage))S.editing.stage="listo";renderEditor();return}
