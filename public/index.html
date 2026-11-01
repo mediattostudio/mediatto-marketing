@@ -143,6 +143,14 @@ main{min-width:0;padding-block:26px 40px;padding-left:max(28px,env(safe-area-ins
 .cell:hover{background:var(--gold-soft)}
 .cell.out{background:var(--surface);color:var(--muted)}
 .cell.out .mini{opacity:.6}
+.mini .ico{font-size:10px;line-height:1.5;flex:none}
+.mini.rec{background:transparent;border:1px dashed var(--gold);color:var(--ink)}
+.mini.rec .ico{filter:saturate(.8)}
+.mini.rec.done{opacity:.55;text-decoration:line-through}
+.mini.pub{background:var(--gold-soft);border-color:transparent}
+.dot.recdot{background:transparent;box-shadow:inset 0 0 0 1.5px var(--gold)}
+.calkey{display:flex;gap:12px;margin-top:10px;align-items:center}
+.daysec{margin:6px 0 2px}
 .cell .n{font-family:var(--f-mono);font-size:11px;display:flex;justify-content:space-between;align-items:center}
 .cell.today .n b{background:var(--gold);color:var(--gold-ink);border-radius:5px;padding:0 5px}
 .cell.drop{background:var(--gold-soft);outline:2px dashed var(--gold);outline-offset:-3px}
@@ -397,6 +405,13 @@ const STAGES=[
 const SN=Object.fromEntries(STAGES.map(s=>[s.id,s.n]));
 const FORMATS=[["reel","Reel"],["carrusel","Carrusel"],["post","Post"],["story","Story"]];
 const PLATFORMS=[["ig","Instagram"],["fb","Facebook"],["tiktok","TikTok"],["yt","YouTube"]];
+const REC_STAGES=["grabar","editar"],STAGE_IX=Object.fromEntries(["idea","guion","grabar","editar","listo","publicado"].map((x,k)=>[x,k]));
+const recDone=i=>STAGE_IX[i.stage]>STAGE_IX.grabar;
+function evtsOn(ds,items){const out=[];items.forEach(i=>{if(i.recDate===ds)out.push({i,kind:"rec"});if(i.date===ds)out.push({i,kind:"pub"})});
+  const tm=x=>(x.kind==="rec"?x.i.recTime:x.i.time)||"";return out.sort((a,b)=>tm(a).localeCompare(tm(b))||(a.kind==="rec"?-1:1))}
+function evMini(ev,drag){const i=ev.i,rec=ev.kind==="rec",tm=rec?i.recTime:i.time;
+  return `<button class="mini ${rec?"rec":"pub"} ${rec&&recDone(i)?"done":""}" ${drag?`draggable="true" data-drag="${i.id}" data-dk="${ev.kind}"`:""} data-open="${i.id}" title="${rec?"Grabar":"Publicar"}: ${esc(i.title||"")}"><span class="ico">${rec?"🎥":"↑"}</span><span>${tm?`<b style="font-family:var(--f-mono);font-size:10px">${esc(tm)}</b> `:""}${esc(i.title||"Sin título")}</span></button>`}
+const evDot=ev=>ev.kind==="rec"?`<i class="dot recdot"></i>`:`<i class="dot st-${ev.i.stage}"></i>`;
 const DATE_STAGES=["listo","publicado"],SHOT_FORMATS=["reel","story"],SHOT_TYPES=["A-roll","B-roll","Detalle","Antes/después","Timelapse"];
 const netsOf=i=>Array.isArray(i.platforms)&&i.platforms.length?i.platforms:(i.platform?[i.platform]:[]);
 const PILLARS=["Autoridad","Autenticidad","Crecimiento","Creencia"];
@@ -534,9 +549,9 @@ function vInicio(){
   const items=all();
   const d0=new Date();const monday=new Date(d0);monday.setDate(d0.getDate()-((d0.getDay()+6)%7));
   const days=[...Array(7)].map((_,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);return iso(d)});
-  const week=days.map(ds=>{const its=items.filter(i=>i.date===ds).sort(byDate);const d=parse(ds);
+  const week=days.map(ds=>{const its=evtsOn(ds,items);const d=parse(ds);
     return `<div class="wday ${ds===TODAY?"today":""}" data-day="${ds}"><div class="d">${DOW[(d.getDay()+6)%7]}<b>${d.getDate()}</b></div>
-      ${its.map(i=>`<button class="mini" data-open="${i.id}"><i class="dot st-${i.stage}"></i><span>${esc(i.title||"Sin título")}</span></button>`).join("")||""}</div>`}).join("");
+      ${its.map(ev=>evMini(ev,false)).join("")}</div>`}).join("");
   const counts=STAGES.map(s=>[s,items.filter(i=>i.stage===s.id).length]);const max=Math.max(1,...counts.map(c=>c[1]));
   const upcoming=items.filter(i=>i.stage!=="publicado"&&i.date&&i.date>=TODAY).sort(byDate).slice(0,6);
   const overdue=items.filter(i=>i.stage!=="publicado"&&i.date&&i.date<TODAY).sort(byDate);
@@ -569,20 +584,26 @@ function vCalendario(){
   const items=all().filter(i=>S.calFmt==="todos"||i.format===S.calFmt);
   const cells=[];for(let k=0;k<42;k++){const d=new Date(start);d.setDate(start.getDate()+k);cells.push(d)}
   const rows=cells[35].getMonth()!==m.getMonth()?35:42;
-  const grid=cells.slice(0,rows).map(d=>{const ds=iso(d);const its=items.filter(i=>i.date===ds).sort(byDate);
+  const grid=cells.slice(0,rows).map(d=>{const ds=iso(d);const its=evtsOn(ds,items);
     return `<div class="cell ${d.getMonth()!==m.getMonth()?"out":""} ${ds===TODAY?"today":""} ${ds===S.selDay?"sel":""}" data-cell="${ds}">
       <div class="n"><b>${d.getDate()}</b><span class="cnt">${its.length>3?"+"+(its.length-3):""}</span></div>
-      ${its.slice(0,3).map(i=>`<button class="mini" draggable="true" data-drag="${i.id}" data-open="${i.id}"><i class="dot st-${i.stage}"></i><span>${i.time?`<b style="font-family:var(--f-mono);font-size:10px">${esc(i.time)}</b> `:""}${esc(i.title||"Sin título")}</span></button>`).join("")}
-      <div class="dots">${its.slice(0,4).map(i=>`<i class="dot st-${i.stage}"></i>`).join("")}</div></div>`}).join("");
-  const dayItems=items.filter(i=>i.date===S.selDay).sort(byDate);
-  const undated=all().filter(i=>!i.date&&i.stage!=="publicado");
+      ${its.slice(0,3).map(ev=>evMini(ev,true)).join("")}
+      <div class="dots">${its.slice(0,5).map(evDot).join("")}</div></div>`}).join("");
+  const dayEv=evtsOn(S.selDay,items),dayRec=dayEv.filter(x=>x.kind==="rec"),dayPub=dayEv.filter(x=>x.kind==="pub");
+  const toRec=all().filter(i=>i.stage==="grabar"&&!i.recDate);
+  const undated=all().filter(i=>DATE_STAGES.includes(i.stage)&&i.stage!=="publicado"&&!i.date);
+  const dayRow=(ev)=>{const i=ev.i,rec=ev.kind==="rec";return `<button class="row" data-open="${i.id}"><span class="when">${esc((rec?i.recTime:i.time)||"—")}</span><span class="t" ${rec&&recDone(i)?'style="text-decoration:line-through;color:var(--muted)"':""}>${esc(i.title||"Sin título")}</span>${fchip(i.format)}</button>`};
   return `${banner()}<div class="head"><div><div class="eyebrow">Calendario de contenido</div><h1>${MES[m.getMonth()][0].toUpperCase()+MES[m.getMonth()].slice(1)} <em>${m.getFullYear()}</em></h1></div>
    <div class="tools"><div class="seg">${[["todos","Todo"],...FORMATS].map(([k,n])=>`<button data-calfmt="${k}" aria-pressed="${S.calFmt===k}">${n}</button>`).join("")}</div>
    <button class="btn" data-mnav="-1" aria-label="Mes anterior">‹</button><button class="btn" data-mnav="0">Hoy</button><button class="btn" data-mnav="1" aria-label="Mes siguiente">›</button></div></div>
    <div class="cal">${DOW.map(d=>`<div class="dow">${d}</div>`).join("")}${grid}</div>
    <div class="daylist"><div class="panel"><h3>${fmtShort(S.selDay)} <button class="btn" data-newdate="${S.selDay}">+ Agregar</button></h3><div class="list">
-     ${dayItems.map(i=>`<button class="row" data-open="${i.id}"><span class="when">${esc(i.time||"—")}</span><span class="t">${esc(i.title||"Sin título")}</span>${fchip(i.format)}<i class="dot st-${i.stage}"></i></button>`).join("")||`<div class="empty">Nada este día.</div>`}</div></div></div>
-   ${undated.length?`<div class="panel" style="margin-top:16px"><h3>Sin fecha <small>arrastra al calendario o ábrelas para asignar</small></h3><div style="display:flex;gap:8px;flex-wrap:wrap">${undated.map(i=>`<button class="mini" style="width:auto;max-width:260px" draggable="true" data-drag="${i.id}" data-open="${i.id}"><i class="dot st-${i.stage}"></i><span>${esc(i.title||"Sin título")}</span></button>`).join("")}</div></div>`:""}`;
+     ${!dayEv.length?`<div class="empty">Nada este día.</div>`:""}
+     ${dayRec.length?`<div class="lbl daysec">🎥 Grabar</div>${dayRec.map(dayRow).join("")}`:""}
+     ${dayPub.length?`<div class="lbl daysec">↑ Publicar</div>${dayPub.map(dayRow).join("")}`:""}</div></div></div>
+   <div class="calkey words"><span><span class="mini rec" style="display:inline-flex;width:auto;padding:1px 6px">🎥 Grabar</span></span><span><span class="mini pub" style="display:inline-flex;width:auto;padding:1px 6px">↑ Publicar</span></span></div>
+   ${toRec.length?`<div class="panel" style="margin-top:16px"><h3>Por agendar grabación <small>arrastra al día en que vas a grabar</small></h3><div style="display:flex;gap:8px;flex-wrap:wrap">${toRec.map(i=>`<span style="max-width:260px">${evMini({i,kind:"rec"},true)}</span>`).join("")}</div></div>`:""}
+   ${undated.length?`<div class="panel" style="margin-top:16px"><h3>Listas sin fecha de publicación <small>arrastra al día en que se sube</small></h3><div style="display:flex;gap:8px;flex-wrap:wrap">${undated.map(i=>`<span style="max-width:260px">${evMini({i,kind:"pub"},true)}</span>`).join("")}</div></div>`:""}`;
 }
 function card(i){
   const p=progress(i);
@@ -590,7 +611,7 @@ function card(i){
    <div class="meta">${fchip(i.format)}<span class="chip">${esc(i.pillar||"")}</span>${i.example?`<span class="example">EJEMPLO</span>`:""}</div>
    <h4>${esc(i.title||"Sin título")}</h4>
    ${i.checklist?.length?`<div class="prog"><i style="width:${p*100}%"></i></div>`:""}
-   <div class="foot"><span>${fmtShort(i.date)}${i.time?" · "+esc(i.time):""}</span><span>${i.checklist?.length?`${i.checklist.filter(x=>x.d).length}/${i.checklist.length}`:""}</span></div></button>`;
+   <div class="foot"><span>${REC_STAGES.includes(i.stage)&&i.stage==="grabar"?(i.recDate?`🎥 ${fmtShort(i.recDate)}${i.recTime?" · "+esc(i.recTime):""}`:"🎥 Sin fecha de grabación"):`${fmtShort(i.date)}${i.time?" · "+esc(i.time):""}`}</span><span>${i.checklist?.length?`${i.checklist.filter(x=>x.d).length}/${i.checklist.length}`:""}</span></div></button>`;
 }
 function vPipeline(){
   const items=all();
@@ -847,6 +868,8 @@ function renderEditor(){
     <div class="fields">
      <div class="field"><label class="lbl" for="e-format">Formato</label><select id="e-format">${opt(FORMATS,e.format)}</select></div>
      <div class="field" style="grid-column:1/-1"><span class="lbl">Redes</span><div class="stagepick">${PLATFORMS.map(([k,n])=>`<button type="button" data-enet="${k}" aria-pressed="${netsOf(e).includes(k)}">${n}</button>`).join("")}</div></div>
+     ${REC_STAGES.includes(e.stage)?`<div class="field"><label class="lbl" for="e-rdate">🎥 Fecha de grabación</label><input type="date" id="e-rdate" value="${esc(e.recDate)}"></div>
+     <div class="field"><label class="lbl" for="e-rtime-h">Hora de grabación</label>${timePick("e-rtime",e.recTime,true)}</div>`:""}
      ${DATE_STAGES.includes(e.stage)?`<div class="field"><label class="lbl" for="e-date">Fecha de publicación</label><input type="date" id="e-date" value="${esc(e.date)}"></div>
      <div class="field"><label class="lbl" for="e-time-h">Hora</label>${timePick("e-time",e.time,true)}</div>`:`<div class="field" style="grid-column:1/-1"><span class="lbl">Fecha de publicación</span><span class="words">Se asigna cuando la pieza pase a <b>Listo</b>.${e.date?` Fecha tentativa guardada: ${fmtShort(e.date)}.`:""}</span></div>`}
      <div class="field" style="grid-column:1/-1"><label class="lbl" for="e-pillar">Pilar</label><select id="e-pillar">${opt(PILLARS.map(p=>[p,p]),e.pillar)}</select></div>
@@ -873,7 +896,7 @@ function renderEditor(){
 function readEditor(){
   const e=S.editing;if(!e)return;
   const v=id=>document.getElementById(id)?.value??"";
-  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),...(document.getElementById("e-date")?{date:v("e-date"),time:readTime("e-time")}:{}),pillar:v("e-pillar"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
+  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),...(document.getElementById("e-date")?{date:v("e-date"),time:readTime("e-time")}:{}),...(document.getElementById("e-rdate")?{recDate:v("e-rdate"),recTime:readTime("e-rtime")}:{}),pillar:v("e-pillar"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
   document.querySelectorAll("[data-ckt]").forEach(el=>{const c=e.checklist[+el.dataset.ckt];if(c)c.t=el.value});
   if(document.getElementById("e-hook")){e.hook=v("e-hook");e.script=v("e-script")}
   if(e.scenes)readScenes(e);
@@ -1227,6 +1250,7 @@ document.addEventListener("click",ev=>{
   if(!S.editing)return;
   if(d.close!==undefined){closeEditor();return}
   if(d.enet){readEditor();const cur=netsOf(S.editing);S.editing.platforms=cur.includes(d.enet)?cur.filter(x=>x!==d.enet):[...cur,d.enet];delete S.editing.platform;renderEditor();return}
+  if(d.stage==="grabar"&&S.editing&&!S.editing.recDate){readEditor();S.editing.stage="grabar";renderEditor();setTimeout(()=>(el=>{if(el){el.scrollIntoView({block:"center"});el.focus({preventScroll:true})}})(document.getElementById("e-rdate")),30);return}
   if(d.stage){readEditor();S.editing.stage=d.stage;renderEditor();return}
   if(d.scadd!==undefined){readEditor();const sl=isSlides(S.editing);S.editing.scenes.push({voz:"",toma:"",k:sl?"":"A-roll",ost:"",dur:5,d:false});renderEditor();const k=S.editing.scenes.length-1;setTimeout(()=>(el=>{if(el){el.focus({preventScroll:true});el.closest(".scene").scrollIntoView({block:"nearest"})}})(document.getElementById((sl?"sco-":"scv-")+k)),20);return}
   if(d.scx){readEditor();if(S.editing.scenes.length>1)S.editing.scenes.splice(+d.scx,1);syncDerived(S.editing);renderEditor();return}
@@ -1259,12 +1283,14 @@ document.addEventListener("input",ev=>{
 document.addEventListener("keydown",ev=>{if(ev.key==="Escape"){if(pr){pr.querySelector("[data-pclose]").click();return}if(S.editing)closeEditor()}});
 /* drag & drop (lap) */
 let dragId=null;
-document.addEventListener("dragstart",ev=>{const t=ev.target.closest("[data-drag]");if(!t)return;dragId=t.dataset.drag;ev.dataTransfer.effectAllowed="move";try{ev.dataTransfer.setData("text/plain",dragId)}catch(e){}});
+let dragKind="pub";
+document.addEventListener("dragstart",ev=>{const t=ev.target.closest("[data-drag]");if(!t)return;dragId=t.dataset.drag;dragKind=t.dataset.dk||"pub";ev.dataTransfer.effectAllowed="move";try{ev.dataTransfer.setData("text/plain",dragId)}catch(e){}});
 document.addEventListener("dragover",ev=>{const z=ev.target.closest("[data-col],[data-cell]");if(!z||!dragId)return;ev.preventDefault();document.querySelectorAll(".drop").forEach(x=>x!==z&&x.classList.remove("drop"));z.classList.add("drop")});
 document.addEventListener("dragleave",ev=>{const z=ev.target.closest("[data-col],[data-cell]");if(z&&!z.contains(ev.relatedTarget))z.classList.remove("drop")});
 document.addEventListener("drop",ev=>{const z=ev.target.closest("[data-col],[data-cell]");if(!z||!dragId)return;ev.preventDefault();const it=S.items.get(dragId);dragId=null;if(!it)return;
   if(z.dataset.col&&it.stage!==z.dataset.col){persist({...it,stage:z.dataset.col},true);toast(`→ ${SN[z.dataset.col]}`)}
-  if(z.dataset.cell&&it.date!==z.dataset.cell){persist({...it,date:z.dataset.cell},true);toast(`Movido al ${fmtShort(z.dataset.cell)}`)}
+  if(z.dataset.cell&&dragKind==="rec"&&it.recDate!==z.dataset.cell){persist({...it,recDate:z.dataset.cell},true);toast(`Grabación: ${fmtShort(z.dataset.cell)}`)}
+  else if(z.dataset.cell&&dragKind!=="rec"&&it.date!==z.dataset.cell){persist({...it,date:z.dataset.cell},true);toast(`Publicación: ${fmtShort(z.dataset.cell)}`)}
   render()});
 document.addEventListener("dragend",()=>{dragId=null;document.querySelectorAll(".drop").forEach(x=>x.classList.remove("drop"))});
 window.addEventListener("hashchange",()=>{const prev=S.view;readHash();if(S.view!==prev)render()});
