@@ -982,7 +982,7 @@ function vAuto(){
   const ago2=t=>ago(new Date(t).getTime());
   const pill=x=>x.status==="sent"&&x.clicks?.f?'<span class="pill p-wa">Guía entregada</span>':({sent:'<span class="pill p-ok">DM enviado</span>',repeat:'<span class="pill p-bad">No se repite</span>',error:'<span class="pill p-bad">Error</span>',pending:'<span class="pill p-wa">Enviando…</span>',skip:'<span class="pill">Ignorado</span>'})[x.status]||"";
   const rows=autos.map(i=>{const e2=evs.filter(x=>x.item_id===i.id),s2=autoStats(e2),on=!!i.automation?.on;
-    return `<div class="arow ${S.autoSel===i.id?"sel":""}" data-autosel="${i.id}"><span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="t">${esc(i.title||"Sin título")}</span><span class="ktag">${esc(i.keyword||"—")}</span></span><span class="num">${num(metricsOf(i).views||0)}</span><span class="num">${s2.comments}</span><span class="num">${s2.sent}</span><span class="num">${s2.clicks}</span><label class="swl sm" title="${on?"Pausar":"Activar"}"><input type="checkbox" data-autotoggle="${i.id}" ${on?"checked":""}><span></span></label></div>`}).join("");
+    return `<div class="arow ${S.autoSel===i.id?"sel":""}" data-autosel="${i.id}"><span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="t">${esc(i.title||"Sin título")}</span><span class="ktag">${esc(i.keyword||"—")}</span>${i.automation?.testMode?'<span class="pill p-wa">Prueba</span>':""}</span><span class="num">${num(metricsOf(i).views||0)}</span><span class="num">${s2.comments}</span><span class="num">${s2.sent}</span><span class="num">${s2.clicks}</span><label class="swl sm" title="${on?"Pausar":"Activar"}"><input type="checkbox" data-autotoggle="${i.id}" ${on?"checked":""}><span></span></label></div>`}).join("");
   const health=!lastHook?`<div class="hookline bad">● Meta todavía no ha mandado ningún aviso a la app. Revisa los webhooks (Instagram → comments, Page → feed) y toca “Reconectar avisos de Meta”.</div>`
     :`<div class="hookline ok">● Último aviso de Meta: ${ago2(lastHook.created_at)} (${esc(lastHook.text)})</div>`;
   const lastMsg=hooks.find(x=>/messag/.test(x.text||""));
@@ -1011,7 +1011,7 @@ function readAxForm(){const g=id=>document.getElementById(id);if(!g("ax-on"))ret
   let file=null;try{file=JSON.parse(g("ax-filedata")?.value||"null")}catch(e){}
   return {keyword:g("ax-kw").value,automation:{on:g("ax-on").checked,nets:["ig","fb"].filter(n=>g("ax-n-"+n)?.checked),replies:g("ax-replies").value,dm:g("ax-dm").value,
     buttons:[0,1].map(k=>({label:g("ax-bl-"+k)?.value||"",url:g("ax-bu-"+k)?.value||""})),
-    file,fileMode:document.querySelector('input[name="ax-fmode"]:checked')?.value||"ask",askLabel:g("ax-ask")?.value||"",afterFile:g("ax-after")?.value||"",fileLabel:g("ax-flabel")?.value||""}}}
+    file,fileMode:document.querySelector('input[name="ax-fmode"]:checked')?.value||"ask",askLabel:g("ax-ask")?.value||"",afterFile:g("ax-after")?.value||"",fileLabel:g("ax-flabel")?.value||"",testMode:!!g("ax-test")?.checked}}}
 function guideBlock(a){
   const f=a.file;
   return `<div class="f"><span class="lbl">Guía en PDF</span><input type="hidden" id="ax-filedata" value="${esc(JSON.stringify(f||null))}">
@@ -1051,6 +1051,7 @@ function autoPanel(i0,evs){
      ${a.file&&a.fileMode==="link"?`<div class="dmbtn one"><input id="ax-flabel" value="${esc(a.fileLabel||"")}" placeholder="📄 Descargar guía" maxlength="20"></div>`:""}
      ${a.file&&a.fileMode!=="link"?"":[0,1].map(k=>`<div class="dmbtn"><input id="ax-bl-${k}" value="${esc(btn[k]?.label||"")}" placeholder="${k?"💬 Escribir por WhatsApp":"📄 Ver la guía"}" maxlength="20"><input id="ax-bu-${k}" value="${esc(btn[k]?.url||"")}" placeholder="${k?"https://wa.me/5281…":"https://… link"}"></div>`).join("")}</div></div>
    ${guideBlock(a)}
+   <label class="radio"><input type="checkbox" id="ax-test" ${a.testMode?"checked":""}> <span><b>Modo prueba</b><br><span class="words">Permite mandar el DM y la guía varias veces a la misma persona. Apágalo cuando ya esté en uso real.</span></span></label>
    <div class="stats3"><div><b>${st.comments}</b><span>comentaron</span></div><div><b>${st.sent}</b><span>DMs enviados</span></div><div><b>${a.file&&a.fileMode!=="link"?st.files:st.clicks}</b><span>${a.file&&a.fileMode!=="link"?"guías entregadas":"clics"}</span></div></div>
    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-open="${i.id}">Abrir pieza</button>${dr?'<span class="words" style="color:var(--warn);margin-right:auto;align-self:center">Cambios sin guardar</span>':""}<button class="btn primary" data-axsave="${i.id}">Guardar</button></div>
   </div>`;
