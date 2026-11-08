@@ -293,13 +293,18 @@ tr:last-child td{border-bottom:0}
 .p-ok{background:rgba(111,178,131,.15);color:var(--ok);border-color:transparent}.p-wa{background:var(--gold-soft);color:var(--gold);border-color:transparent}.p-bad{background:rgba(217,115,95,.15);color:var(--bad);border-color:transparent}
 @media (max-width:860px){.arow{grid-template-columns:1fr 50px 44px 44px}.arow>:nth-child(2),.arow>:nth-child(6){display:none}.aubtn{grid-template-columns:1fr}}
 
+
+.filechip{display:flex;align-items:center;gap:10px;background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:6px 6px 6px 10px;font-size:13px}
+.filechip span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.filechip a{color:var(--gold)}
+.radio{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer}.radio input{accent-color:var(--gold);margin-top:3px}
+.dmbtn.one{grid-template-columns:1fr}
 .autogrid{display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:20px;align-items:start}
 .autoleft{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}
 .autoright{display:flex;flex-direction:column;gap:16px;min-width:0}
 .autoright .kpis{margin-bottom:0}
 .autopanel{display:flex;flex-direction:column;gap:12px}.autopanel.on{border-color:var(--gold)}
 .autopanel .f{display:flex;flex-direction:column;gap:5px}
-.autopanel input:not([type=checkbox]),.autopanel textarea{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--raised);width:100%;min-width:0;resize:vertical}
+.autopanel input:not([type=checkbox]):not([type=radio]):not([type=file]),.autopanel textarea{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--raised);width:100%;min-width:0;resize:vertical}
 .autopanel .kwin{font:700 14px var(--f-mono);letter-spacing:.06em}
 .chk.off{opacity:.55}
 .dmprev{background:#0E0E0D;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
@@ -948,8 +953,8 @@ function readTime(pre){
 /* ---------- automatizaciones ---------- */
 S.autoEvents=null;
 async function loadAuto(){try{const r=await api("/api/automations");S.autoEvents=r.events||[];S.autoVerify=r.verifyConfigured}catch(e){S.autoEvents=S.autoEvents||[]}}
-function autoStats(evs){evs=evs.filter(x=>["sent","repeat","error","pending"].includes(x.status));const sent=evs.filter(x=>x.status==="sent"),clicks=sent.reduce((a,x)=>a+Object.values(x.clicks||{}).reduce((s,n)=>s+n,0),0),people=sent.filter(x=>x.clicks&&Object.keys(x.clicks).length).length;
-  return {comments:evs.length,sent:sent.length,clicks,people,errors:evs.filter(x=>x.status==="error").length}}
+function autoStats(evs){evs=evs.filter(x=>["sent","repeat","error","pending"].includes(x.status));const sent=evs.filter(x=>x.status==="sent"),ck=x=>Object.entries(x.clicks||{}).filter(([k])=>k!=="f"&&k!=="fh").reduce((s,[,n])=>s+(+n||0),0),clicks=sent.reduce((a,x)=>a+ck(x),0),people=sent.filter(x=>ck(x)>0).length;
+  return {comments:evs.length,sent:sent.length,clicks,people,files:sent.filter(x=>x.clicks?.f).length,errors:evs.filter(x=>x.status==="error").length}}
 function autoEditor(e){
   const a=e.automation||{},on=!!a.on,nets=a.nets||["ig","fb"],btn=a.buttons||[{label:"Ver la guía",url:""},{label:"Escribir por WhatsApp",url:""}];
   const evs=(S.autoEvents||[]).filter(x=>x.item_id===e.id),st=autoStats(evs);
@@ -962,6 +967,7 @@ function autoEditor(e){
    <div class="stagepick">${[["ig","Instagram"],["fb","Facebook"]].map(([n,l])=>`<label class="chk"><input type="checkbox" id="au-n-${n}" ${nets.includes(n)?"checked":""}>${l}</label>`).join("")}<span class="words">TikTok no permite DMs automáticos</span></div>
    <label class="field"><span class="lbl">Respuesta pública · una por línea, se rotan</span><textarea id="au-replies" rows="3" placeholder="¡Listo! Te lo mandé por DM 📩&#10;Revisa tus mensajes 👀&#10;Ya te llegó por DM">${esc(a.replies||"")}</textarea></label>
    <label class="field"><span class="lbl">Mensaje directo</span><textarea id="au-dm" rows="4" placeholder="Hola 👋 Aquí tienes la guía…">${esc(a.dm||"")}</textarea></label>
+   ${a.file?`<div class="words">📄 Guía: ${esc(a.file.name)} · ${a.fileMode==="link"?"botón de descarga":"se manda como archivo en el chat"} · se edita en la pestaña Auto</div>`:`<div class="words">¿Quieres mandar una guía en PDF? Súbela en la pestaña Auto.</div>`}
    <div class="field"><span class="lbl">Botones del DM</span>${[0,1].map(k=>`<div class="aubtn"><input id="au-bl-${k}" placeholder="Texto del botón" value="${esc(btn[k]?.label||"")}" maxlength="20"><input id="au-bu-${k}" placeholder="${k?"https://wa.me/5281XXXXXXXX":"https://… link de la guía"}" value="${esc(btn[k]?.url||"")}"></div>`).join("")}</div>
    ${evs.length?`<div class="stats3"><div><b>${st.comments}</b><span>comentaron</span></div><div><b>${st.sent}</b><span>DMs enviados</span></div><div><b>${st.clicks}</b><span>clics en botones</span></div></div>`:""}
   </div>`;
@@ -974,7 +980,7 @@ function vAuto(){
   if(!S.autoSel||!S.items.get(S.autoSel))S.autoSel=autos[0]?.id||null;
   const sel=S.autoSel&&S.items.get(S.autoSel);
   const ago2=t=>ago(new Date(t).getTime());
-  const pill=x=>({sent:'<span class="pill p-ok">DM enviado</span>',repeat:'<span class="pill p-bad">No se repite</span>',error:'<span class="pill p-bad">Error</span>',pending:'<span class="pill p-wa">Enviando…</span>',skip:'<span class="pill">Ignorado</span>'})[x.status]||"";
+  const pill=x=>x.status==="sent"&&x.clicks?.f?'<span class="pill p-wa">Guía entregada</span>':({sent:'<span class="pill p-ok">DM enviado</span>',repeat:'<span class="pill p-bad">No se repite</span>',error:'<span class="pill p-bad">Error</span>',pending:'<span class="pill p-wa">Enviando…</span>',skip:'<span class="pill">Ignorado</span>'})[x.status]||"";
   const rows=autos.map(i=>{const e2=evs.filter(x=>x.item_id===i.id),s2=autoStats(e2),on=!!i.automation?.on;
     return `<div class="arow ${S.autoSel===i.id?"sel":""}" data-autosel="${i.id}"><span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="t">${esc(i.title||"Sin título")}</span><span class="ktag">${esc(i.keyword||"—")}</span></span><span class="num">${num(metricsOf(i).views||0)}</span><span class="num">${s2.comments}</span><span class="num">${s2.sent}</span><span class="num">${s2.clicks}</span><label class="swl sm" title="${on?"Pausar":"Activar"}"><input type="checkbox" data-autotoggle="${i.id}" ${on?"checked":""}><span></span></label></div>`}).join("");
   const health=!lastHook?`<div class="hookline bad">● Meta todavía no ha mandado ningún aviso a la app. Revisa los webhooks (Instagram → comments, Page → feed) y toca “Reconectar avisos de Meta”.</div>`
@@ -998,8 +1004,32 @@ function vAuto(){
 }
 S.autoDraft={};
 function readAxForm(){const g=id=>document.getElementById(id);if(!g("ax-on"))return null;
+  let file=null;try{file=JSON.parse(g("ax-filedata")?.value||"null")}catch(e){}
   return {keyword:g("ax-kw").value,automation:{on:g("ax-on").checked,nets:["ig","fb"].filter(n=>g("ax-n-"+n)?.checked),replies:g("ax-replies").value,dm:g("ax-dm").value,
-    buttons:[0,1].map(k=>({label:g("ax-bl-"+k).value,url:g("ax-bu-"+k).value}))}}}
+    buttons:[0,1].map(k=>({label:g("ax-bl-"+k)?.value||"",url:g("ax-bu-"+k)?.value||""})),
+    file,fileMode:document.querySelector('input[name="ax-fmode"]:checked')?.value||"ask",askLabel:g("ax-ask")?.value||"",afterFile:g("ax-after")?.value||"",fileLabel:g("ax-flabel")?.value||""}}}
+function guideBlock(a){
+  const f=a.file;
+  return `<div class="f"><span class="lbl">Guía en PDF</span><input type="hidden" id="ax-filedata" value="${esc(JSON.stringify(f||null))}">
+   ${f?`<div class="filechip"><span>📄 ${esc(f.name)}</span><a href="${esc(f.url)}" target="_blank" rel="noopener">Ver</a><button class="btn ghost" data-axfilerm>Quitar</button></div>
+     <label class="radio"><input type="radio" name="ax-fmode" value="ask" ${a.fileMode!=="link"?"checked":""}> <span><b>Mandarla como archivo en el chat</b><br><span class="words">El DM pregunta “¿te la mando?” y al contestar le llega el PDF</span></span></label>
+     <label class="radio"><input type="radio" name="ax-fmode" value="link" ${a.fileMode==="link"?"checked":""}> <span><b>Botón que abre el PDF</b><br><span class="words">Desde el primer mensaje, sin pasos</span></span></label>
+     ${a.fileMode!=="link"?`<label class="f"><span class="lbl">Mensaje después de mandar la guía (opcional)</span><textarea id="ax-after" rows="2" placeholder="Si quieres que revisemos tu espacio, escríbenos por WhatsApp: https://wa.me/52…">${esc(a.afterFile||"")}</textarea></label>`:""}`
+    :`<label class="btn" style="align-self:flex-start;cursor:pointer">📎 Subir PDF<input type="file" id="ax-file" accept="application/pdf" hidden></label><span class="words">${S.axUploading?"Subiendo…":"Para mandarla como archivo o con un botón de descarga"}</span>`}</div>`;
+}
+async function uploadGuide(file){
+  if(file.type!=="application/pdf"){toast("Sube la guía en PDF");return}
+  if(file.size>20*1024*1024){toast("El PDF pesa más de 20 MB; comprímelo e intenta de nuevo",5000);return}
+  const id=S.autoSel;S.axUploading=true;render();
+  try{const u=await api("/api/automations?action=upload",{method:"POST",body:JSON.stringify({name:file.name,mime:file.type})});
+    const r=await fetch(u.uploadUrl,{method:"PUT",headers:{"Content-Type":"application/pdf","x-upsert":"false"},body:file});
+    if(!r.ok)throw new Error("No se pudo subir ("+r.status+")");
+    const f=readAxForm()||{keyword:S.items.get(id)?.keyword||"",automation:{...(S.items.get(id)?.automation||{})}};
+    f.automation.file={name:file.name,url:u.publicUrl,path:u.path,size:file.size};f.automation.fileMode=f.automation.fileMode||"ask";
+    S.autoDraft[id]=f;toast("Guía subida · toca Guardar");
+  }catch(e){if(e.message!=="auth")toast("No se pudo subir: "+e.message,6000)}
+  finally{S.axUploading=false;render()}
+}
 function autoPanel(i0,evs){
   // Lo que escribiste y no has guardado se conserva aunque la pantalla se actualice sola
   const dr=S.autoDraft[i0.id],i=dr?{...i0,keyword:dr.keyword,automation:dr.automation}:i0;
@@ -1013,8 +1043,11 @@ function autoPanel(i0,evs){
    <label class="f"><span class="lbl">Respuesta pública · una por línea</span><textarea id="ax-replies" rows="2" placeholder="¡Listo! Te lo mandé por DM 📩">${esc(a.replies||"")}</textarea></label>
    <div class="f"><span class="lbl">Mensaje directo</span>
     <div class="dmprev"><textarea id="ax-dm" rows="4" class="bub" placeholder="Hola 👋 Aquí tienes la guía…">${esc(a.dm||"")}</textarea>
-     ${[0,1].map(k=>`<div class="dmbtn"><input id="ax-bl-${k}" value="${esc(btn[k]?.label||"")}" placeholder="${k?"💬 Escribir por WhatsApp":"📄 Ver la guía"}" maxlength="20"><input id="ax-bu-${k}" value="${esc(btn[k]?.url||"")}" placeholder="${k?"https://wa.me/5281…":"https://… link"}"></div>`).join("")}</div></div>
-   <div class="stats3"><div><b>${st.comments}</b><span>comentaron</span></div><div><b>${st.sent}</b><span>DMs enviados</span></div><div><b>${st.clicks}</b><span>clics</span></div></div>
+     ${a.file&&a.fileMode!=="link"?`<div class="dmbtn one"><input id="ax-ask" value="${esc(a.askLabel||"")}" placeholder="Sí, mándamela" maxlength="20"></div><div class="words" style="color:#8C867B">Al tocarlo, la app le manda el PDF en el chat.</div>`:""}
+     ${a.file&&a.fileMode==="link"?`<div class="dmbtn one"><input id="ax-flabel" value="${esc(a.fileLabel||"")}" placeholder="📄 Descargar guía" maxlength="20"></div>`:""}
+     ${a.file&&a.fileMode!=="link"?"":[0,1].map(k=>`<div class="dmbtn"><input id="ax-bl-${k}" value="${esc(btn[k]?.label||"")}" placeholder="${k?"💬 Escribir por WhatsApp":"📄 Ver la guía"}" maxlength="20"><input id="ax-bu-${k}" value="${esc(btn[k]?.url||"")}" placeholder="${k?"https://wa.me/5281…":"https://… link"}"></div>`).join("")}</div></div>
+   ${guideBlock(a)}
+   <div class="stats3"><div><b>${st.comments}</b><span>comentaron</span></div><div><b>${st.sent}</b><span>DMs enviados</span></div><div><b>${a.file&&a.fileMode!=="link"?st.files:st.clicks}</b><span>${a.file&&a.fileMode!=="link"?"guías entregadas":"clics"}</span></div></div>
    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-open="${i.id}">Abrir pieza</button>${dr?'<span class="words" style="color:var(--warn);margin-right:auto;align-self:center">Cambios sin guardar</span>':""}<button class="btn primary" data-axsave="${i.id}">Guardar</button></div>
   </div>`;
 }
@@ -1076,7 +1109,7 @@ function readEditor(){
   const e=S.editing;if(!e)return;
   const v=id=>document.getElementById(id)?.value??"";
   if(document.getElementById("au-on")){const g=id=>document.getElementById(id);
-    e.automation={on:g("au-on").checked,nets:["ig","fb"].filter(n=>g("au-n-"+n)?.checked),replies:g("au-replies").value,dm:g("au-dm").value,
+    e.automation={...(e.automation||{}),on:g("au-on").checked,nets:["ig","fb"].filter(n=>g("au-n-"+n)?.checked),replies:g("au-replies").value,dm:g("au-dm").value,
       buttons:[0,1].map(k=>({label:g("au-bl-"+k).value.trim(),url:g("au-bu-"+k).value.trim()})).filter(b=>b.label||b.url)}}
   Object.assign(e,{links:Object.fromEntries(LINK_NETS.map(n=>[n,v("e-lk-"+n)]).filter(x=>x[1])),linkedPost:null,title:v("e-title").trim(),...(document.getElementById("e-date")?{date:v("e-date"),time:readTime("e-time")}:{}),...(document.getElementById("e-rdate")?{recDate:v("e-rdate"),recTime:readTime("e-rtime")}:{}),pillar:v("e-pillar"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
   document.querySelectorAll("[data-ckt]").forEach(el=>{const c=e.checklist[+el.dataset.ckt];if(c)c.t=el.value});
@@ -1379,7 +1412,8 @@ document.addEventListener("click",ev=>{
 });
 document.addEventListener("change",ev=>{
   const el=ev.target;
-  if(el.id&&el.id.startsWith("ax-")&&S.autoSel){const f=readAxForm();if(f)S.autoDraft[S.autoSel]=f}if(S.view!=="publicar")return;
+  if(el.id==="ax-file"&&el.files?.[0]&&S.autoSel){uploadGuide(el.files[0]);return}
+  if((el.id&&el.id.startsWith("ax-")||el.name==="ax-fmode")&&S.autoSel){const f=readAxForm();if(f){S.autoDraft[S.autoSel]=f;if(el.name==="ax-fmode")render()}}if(S.view!=="publicar")return;
   if(el.dataset.pfile!==undefined){const fl=el.files;if(fl&&fl.length)addFiles(fl);el.value="";return}
   if(el.id==="p-item"){if(el.value)fillFromItem(el.value);else P.itemId="";render();return}
   if(el.id==="p-ad"||/^p-at-/.test(el.id)){const d=document.getElementById("p-ad")?.value||"";P.at=d?`${d}T${readTime("p-at")}`:"";render();return}
@@ -1426,9 +1460,11 @@ document.addEventListener("click",ev=>{
   if(d.script){S.scriptId=d.script;render();return}
   if(d.scriptback!==undefined){S.scriptId=null;render();return}
   if(d.mnav!==undefined){const n=+d.mnav;const t0=new Date();S.month=n===0?new Date(t0.getFullYear(),t0.getMonth(),1):new Date(S.month.getFullYear(),S.month.getMonth()+n,1);if(n===0)S.selDay=TODAY;render();return}
+  if(d.axfilerm!==undefined&&S.autoSel){const f=readAxForm();if(f){f.automation.file=null;S.autoDraft[S.autoSel]=f;render()}return}
   if(d.axsave){const it=S.items.get(d.axsave);if(!it)return;const g=id=>document.getElementById(id);
-    persist({...it,keyword:g("ax-kw").value.trim().toUpperCase(),automation:{on:g("ax-on").checked,nets:["ig","fb"].filter(n=>g("ax-n-"+n)?.checked),replies:g("ax-replies").value,dm:g("ax-dm").value,
-      buttons:[0,1].map(k=>({label:g("ax-bl-"+k).value.trim(),url:g("ax-bu-"+k).value.trim()})).filter(b=>b.label||b.url)}},true);delete S.autoDraft[d.axsave];toast("Automatización guardada");render();return}
+    const f=readAxForm();const au=f.automation;au.buttons=(au.buttons||[]).map(b=>({label:b.label.trim(),url:b.url.trim()})).filter(b=>b.label||b.url);
+    if(!document.getElementById("ax-bl-0")&&it.automation?.buttons)au.buttons=it.automation.buttons;
+    persist({...it,keyword:f.keyword.trim().toUpperCase(),automation:au},true);delete S.autoDraft[d.axsave];toast("Automatización guardada");render();return}
   if(t.dataset.autosel&&!ev.target.closest("label,input")){S.autoSel=t.dataset.autosel;render();return}
   if(d.autore!==undefined){S.autoEvents=null;render();return}
   if(d.autosub!==undefined){api("/api/automations?action=subscribe",{method:"POST"}).then(()=>toast("Avisos de Meta reconectados")).catch(e=>toast("No se pudo: "+e.message,6000));return}
