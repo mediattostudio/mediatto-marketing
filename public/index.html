@@ -265,6 +265,11 @@ tr:last-child td{border-bottom:0}
 .field{display:flex;flex-direction:column;gap:4px;min-width:0}
 .field input,.field select,.field textarea{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--raised);width:100%;min-width:0}
 .field textarea{resize:vertical;min-height:70px;line-height:1.55}
+.links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.links .lk{display:flex;flex-direction:column;gap:4px;min-width:0}
+.links .lk span{font:500 10px var(--f-mono);letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.links select{border:1px solid var(--line);border-radius:8px;padding:8px 6px;background:var(--raised);width:100%;min-width:0}
+@media (max-width:860px){.links{grid-template-columns:1fr}}
 .tpick{display:flex;align-items:center;gap:4px}
 .tpick select{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:8px 2px 8px 8px;background:var(--raised);font-variant-numeric:tabular-nums}
 .tpick span{color:var(--muted)}
@@ -525,7 +530,11 @@ function showLogin(){
 const all=()=>[...S.items.values()];
 const AUTO_KEYS=["views","likes","comments","saves","shares","reach"];
 const postById=id=>S.posts.find(p=>p.id===id);
-function metricsOf(i){const m={...(i.metrics||{})};const p=i.linkedPost&&postById(i.linkedPost);if(p)AUTO_KEYS.forEach(k=>{if(p[k]!=null&&p[k]!==0||m[k]==null)m[k]=p[k]||0});return m}
+const LINK_NETS=["ig","fb","tiktok"];
+function linksOf(i){const l={...(i.links||{})};if(i.linkedPost&&!Object.values(l).includes(i.linkedPost)){const pr=i.linkedPost.split(":")[0];if(!l[pr])l[pr]=i.linkedPost}return l}
+const linkedPostsOf=i=>Object.values(linksOf(i)).map(postById).filter(Boolean);
+// Métricas: suma de todas las redes vinculadas; lo capturado a mano se usa solo donde no hay dato automático
+function metricsOf(i){const m={...(i.metrics||{})};const ps=linkedPostsOf(i);if(ps.length)AUTO_KEYS.forEach(k=>{const t=ps.reduce((a,p)=>a+(+p[k]||0),0);if(t||m[k]==null)m[k]=t});return m}
 const NETN={ig:"Instagram",fb:"Facebook",tiktok:"TikTok"};
 const localDay=t=>iso(new Date(t));
 const ago=t=>{if(!t)return"nunca";const m=Math.round((Date.now()-t)/6e4);return m<1?"hace un momento":m<60?`hace ${m} min`:m<1440?`hace ${Math.round(m/60)} h`:`hace ${Math.round(m/1440)} d`};
@@ -697,7 +706,7 @@ function vMetricas(){
    <section class="panel"><h3>Piezas publicadas <small>edita los números directo en la tabla</small></h3>
     ${pub.length?`<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Pieza</th><th>Formato</th>${cols.map(c=>`<th class="num">${c[1]}</th>`).join("")}</tr></thead><tbody>
      ${pub.map(i=>`<tr><td style="font-family:var(--f-mono);font-size:11.5px">${fmtShort(i.date)}</td><td style="max-width:240px;overflow:hidden;text-overflow:ellipsis"><a href="#" data-open="${i.id}" style="color:var(--ink)">${esc(i.title||"Sin título")}</a></td><td>${fchip(i.format)}</td>
-       ${cols.map(c=>{const auto=i.linkedPost&&postById(i.linkedPost)&&AUTO_KEYS.includes(c[0]);return auto?`<td class="num" title="Automático desde ${NETN[postById(i.linkedPost).provider]}">${num(M(i,c[0]))} <span class="auto">AUTO</span></td>`:`<td class="num"><input id="m-${i.id}-${c[0]}" inputmode="numeric" data-metric="${i.id}" data-k="${c[0]}" value="${i.metrics?.[c[0]]??""}" placeholder="0"></td>`}).join("")}</tr>`).join("")}
+       ${cols.map(c=>{const lp=linkedPostsOf(i),auto=lp.length&&AUTO_KEYS.includes(c[0]);return auto?`<td class="num" title="Automático: ${lp.map(p=>NETN[p.provider]).join(" + ")}">${num(M(i,c[0]))} <span class="auto">AUTO</span></td>`:`<td class="num"><input id="m-${i.id}-${c[0]}" inputmode="numeric" data-metric="${i.id}" data-k="${c[0]}" value="${i.metrics?.[c[0]]??""}" placeholder="0"></td>`}).join("")}</tr>`).join("")}
     </tbody></table></div>`:`<div class="empty">Aún no hay piezas publicadas. Mueve una a “Publicado” en el pipeline.</div>`}
    </section>`;
 }
@@ -761,7 +770,7 @@ function vRedes(){
      <text x="${W-pr2}" y="${H-6}" text-anchor="end" font-size="10" font-family="JetBrains Mono,monospace" fill="var(--muted)">${fmtShort(lastSnap.day)}</text></svg>`;
   }
   const top=[...posts].sort((a,b)=>((b.views||b.reach||b.likes||0)-(a.views||a.reach||a.likes||0))).slice(0,8);
-  const linked=new Set(all().map(i=>i.linkedPost).filter(Boolean));
+  const linked=new Set(all().flatMap(i=>Object.values(linksOf(i))).filter(Boolean));
   const postCard=p=>`<a class="post" href="${esc(p.permalink||"#")}" target="_blank" rel="noopener">
     <div class="th" style="${p.thumb?`background-image:url('${esc(p.thumb)}')`:""}"><span class="chip tag" style="background:var(--raised)">${esc(p.type||"")}</span></div>
     <div class="bd"><div class="words">${p.postedAt?fmtShort(localDay(p.postedAt)):""}${linked.has(p.id)?' · <span class="auto">VINCULADA</span>':""}</div><div class="cap">${esc(p.caption||"Sin texto")}</div>
@@ -890,11 +899,11 @@ function renderEditor(){
     <div class="field"><span class="lbl" style="display:flex;justify-content:space-between"><span>Checklist de producción</span><span>${(e.checklist||[]).filter(x=>x.d).length}/${(e.checklist||[]).length}</span></span>
      <div class="check">${(e.checklist||[]).map((c,k)=>`<div class="ck ${c.d?"done":""}"><input type="checkbox" id="ck-${k}" data-ck="${k}" ${c.d?"checked":""} aria-label="Hecho"><input type="text" id="ckt-${k}" data-ckt="${k}" value="${esc(c.t)}"><button class="x" data-ckx="${k}" aria-label="Quitar">×</button></div>`).join("")}
       <button class="btn ghost" style="align-self:flex-start" data-ckadd>+ Agregar paso</button></div></div>
-    <div class="field"><label class="lbl" for="e-linked">Publicación vinculada · llena las métricas solas</label>
-     <select id="e-linked"><option value="">Sin vincular</option>${S.posts.slice(0,80).map(p=>`<option value="${esc(p.id)}" ${e.linkedPost===p.id?"selected":""}>${NETN[p.provider]} · ${p.postedAt?fmtShort(localDay(p.postedAt)):""} · ${esc((p.caption||"Sin texto").slice(0,50))}</option>`).join("")}</select>
+    <div class="field"><span class="lbl">Publicaciones vinculadas · llenan las métricas solas</span>
+     ${(()=>{const L=linksOf(e);return `<div class="links">${LINK_NETS.map(n=>{const ps=S.posts.filter(p=>p.provider===n).slice(0,60);return `<label class="lk"><span>${NETN[n]}</span><select id="e-lk-${n}" data-lk="${n}"><option value="">${ps.length?"Sin vincular":"Sin publicaciones sincronizadas"}</option>${ps.map(p=>`<option value="${esc(p.id)}" ${L[n]===p.id?"selected":""}>${p.postedAt?fmtShort(localDay(p.postedAt)):""} · ${esc((p.caption||"Sin texto").slice(0,48))}</option>`).join("")}</select></label>`}).join("")}</div>`})()}
      ${!S.posts.length?`<span class="words">Conecta tus redes en la pestaña Redes para ver tus publicaciones aquí.</span>`:""}</div>
     <details ${e.stage==="publicado"?"open":""}><summary>Métricas</summary>
-     <div class="metrics" style="margin-top:8px">${[["views","Reprod."],["likes","Likes"],["comments","Coment."],["saves","Guardados"],["shares","Compart."],["follows","Seguidores"],["leads","Leads"],["reach","Alcance"]].map(([k,n])=>`<div class="field"><label class="lbl" for="em-${k}">${n}</label><input id="em-${k}" inputmode="numeric" data-em="${k}" value="${e.metrics?.[k]??""}" placeholder="${e.linkedPost&&postById(e.linkedPost)&&AUTO_KEYS.includes(k)?num(postById(e.linkedPost)[k]||0)+" auto":"0"}"></div>`).join("")}</div></details>
+     <div class="metrics" style="margin-top:8px">${[["views","Reprod."],["likes","Likes"],["comments","Coment."],["saves","Guardados"],["shares","Compart."],["follows","Seguidores"],["leads","Leads"],["reach","Alcance"]].map(([k,n])=>`<div class="field"><label class="lbl" for="em-${k}">${n}</label><input id="em-${k}" inputmode="numeric" data-em="${k}" value="${e.metrics?.[k]??""}" placeholder="${linkedPostsOf(e).length&&AUTO_KEYS.includes(k)?num(linkedPostsOf(e).reduce((a,p)=>a+(+p[k]||0),0))+" auto":"0"}"></div>`).join("")}</div></details>
     <div class="field"><label class="lbl" for="e-notes">Notas / link de la publicación</label><textarea id="e-notes" rows="3">${esc(e.notes)}</textarea></div>
    </div>
    <footer>${S.editingIsNew?"<span></span>":`<button class="btn danger" data-del>Borrar</button>`}<div class="tools"><button class="btn" data-close>Cancelar</button><button class="btn primary" data-save>Guardar</button></div></footer>
@@ -905,7 +914,7 @@ function renderEditor(){
 function readEditor(){
   const e=S.editing;if(!e)return;
   const v=id=>document.getElementById(id)?.value??"";
-  Object.assign(e,{linkedPost:v("e-linked")||null,title:v("e-title").trim(),...(document.getElementById("e-date")?{date:v("e-date"),time:readTime("e-time")}:{}),...(document.getElementById("e-rdate")?{recDate:v("e-rdate"),recTime:readTime("e-rtime")}:{}),pillar:v("e-pillar"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
+  Object.assign(e,{links:Object.fromEntries(LINK_NETS.map(n=>[n,v("e-lk-"+n)]).filter(x=>x[1])),linkedPost:null,title:v("e-title").trim(),...(document.getElementById("e-date")?{date:v("e-date"),time:readTime("e-time")}:{}),...(document.getElementById("e-rdate")?{recDate:v("e-rdate"),recTime:readTime("e-rtime")}:{}),pillar:v("e-pillar"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
   document.querySelectorAll("[data-ckt]").forEach(el=>{const c=e.checklist[+el.dataset.ckt];if(c)c.t=el.value});
   if(document.getElementById("e-hook")){e.hook=v("e-hook");e.script=v("e-script")}
   if(e.scenes)readScenes(e);
@@ -1276,7 +1285,7 @@ document.addEventListener("click",ev=>{
 document.addEventListener("change",ev=>{
   const el=ev.target;
   if(el.id==="e-format"&&S.editing){readEditor();const e=S.editing;const untouched=e.checklist.every(c=>!c.d);e.format=el.value;if(e.scenes&&!SCENE_FORMATS.includes(e.format)){syncDerived(e)}if(untouched)e.checklist=CHECK[e.format].map(t=>({t,d:false}));renderEditor();return}
-  if(el.id==="e-linked"&&S.editing){readEditor();const p=postById(el.value);if(p){S.editing.stage="publicado";if(!S.editing.date&&p.postedAt)S.editing.date=localDay(p.postedAt)}renderEditor();return}
+  if(el.dataset.lk&&S.editing){readEditor();const p=postById(el.value);if(p){S.editing.stage="publicado";if(!S.editing.date&&p.postedAt)S.editing.date=localDay(p.postedAt)}renderEditor();return}
   if(el.dataset.scd!==undefined&&S.editing){readEditor();S.editing.scenes[+el.dataset.scd].d=el.checked;syncDerived(S.editing);renderEditor();return}
   if(el.dataset.scs!==undefined&&S.editing){readEditor();renderEditor();return}
   if(el.dataset.sh!==undefined&&S.editing){readEditor();S.editing.shots[+el.dataset.sh].d=el.checked;renderEditor();return}
