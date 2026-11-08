@@ -273,6 +273,25 @@ tr:last-child td{border-bottom:0}
 .netcmp .nh{display:flex;align-items:center;gap:6px}.netcmp .nh .words{margin-left:auto}
 .netcmp .hbar{grid-template-columns:96px 1fr 56px}
 @media (max-width:860px){.netcmp{grid-template-columns:1fr}}
+
+.autobox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;gap:10px}
+.autobox.on{border-color:var(--gold)}
+.autobox textarea,.autobox input:not([type=checkbox]){border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--raised);width:100%;min-width:0}
+.swl{position:relative;width:44px;height:26px;flex:none;cursor:pointer}.swl input{opacity:0;width:0;height:0;position:absolute}
+.swl span{position:absolute;inset:0;border-radius:99px;background:var(--line);transition:.15s}.swl span:after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:.15s}
+.swl input:checked+span{background:var(--gold)}.swl input:checked+span:after{left:21px;background:#1A1A1A}
+.swl input:focus-visible+span{outline:2px solid var(--gold);outline-offset:2px}
+.chk{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:4px 10px;font-size:12.5px}.chk input{accent-color:var(--gold)}
+.aubtn{display:grid;grid-template-columns:150px 1fr;gap:6px;margin-bottom:6px}
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stats3>div{background:var(--raised);border-radius:8px;padding:8px}.stats3 b{display:block;font:900 20px var(--f-display)}.stats3 span{font-size:11.5px;color:var(--muted)}
+.arow{display:grid;grid-template-columns:1fr 80px 70px 60px 60px 84px;gap:10px;align-items:center;padding:10px 4px;border-top:1px solid var(--line);font-size:13px}
+.arow.h{border-top:0}.arow .num{text-align:right;font-variant-numeric:tabular-nums}.arow .t{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.ktag{flex:none;font:600 9.5px var(--f-mono);letter-spacing:.06em;color:var(--gold);border:1px dashed var(--gold);border-radius:6px;padding:1px 6px}
+.alog{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+.alog .av{width:28px;height:28px;border-radius:50%;background:var(--raised);display:grid;place-items:center;font:600 10.5px var(--f-mono);color:var(--muted)}
+.pill{font:500 10.5px var(--f-mono);padding:2px 8px;border-radius:99px;white-space:nowrap;border:1px solid var(--line);color:var(--muted)}
+.p-ok{background:rgba(111,178,131,.15);color:var(--ok);border-color:transparent}.p-wa{background:var(--gold-soft);color:var(--gold);border-color:transparent}.p-bad{background:rgba(217,115,95,.15);color:var(--bad);border-color:transparent}
+@media (max-width:860px){.arow{grid-template-columns:1fr 50px 44px 44px}.arow>:nth-child(2),.arow>:nth-child(6){display:none}.aubtn{grid-template-columns:1fr}}
 .links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .links .lk{display:flex;flex-direction:column;gap:4px;min-width:0}
 .links .lk span{font:500 10px var(--f-mono);letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
@@ -370,7 +389,8 @@ details summary{cursor:pointer;font-weight:600;font-size:13px;padding:4px 0}
   .nav{display:none}
   main{padding-block:16px calc(var(--tab) + 30px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .tabs{display:grid;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
-  .tabs{grid-template-columns:repeat(7,1fr)!important}
+  .tabs{grid-template-columns:repeat(8,1fr)!important}
+  .tabs button{font-size:9.5px!important}
   .tabs button{font-size:10px!important}
   .conns{grid-template-columns:1fr}
   .tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;color:var(--muted);padding:4px 0;font-weight:500}
@@ -445,10 +465,11 @@ const ICONS={
  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
  pipe:'<rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="6" rx="1.5"/>',
  script:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h7"/>',
+ bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
  stats:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
  send:'<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>',
  net:'<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.9l7.6-3.8M8.2 13.1l7.6 3.8"/>'};
-const VIEWS=[["inicio","Inicio","home"],["calendario","Calendario","cal"],["pipeline","Pipeline","pipe"],["guiones","Guiones","script"],["publicar","Publicar","send"],["metricas","Métricas","stats"],["redes","Redes","net"]];
+const VIEWS=[["inicio","Inicio","home"],["calendario","Calendario","cal"],["pipeline","Pipeline","pipe"],["guiones","Guiones","script"],["publicar","Publicar","send"],["metricas","Métricas","stats"],["redes","Redes","net"],["auto","Auto","bolt"]];
 const svg=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`;
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pad=n=>String(n).padStart(2,"0");
@@ -903,8 +924,50 @@ function readTime(pre){
   const m=+document.getElementById(pre+"-m").value,ap=document.getElementById(pre+"-ap").value;
   const h24=(+h%12)+(ap==="pm"?12:0);return `${String(h24).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
+
+/* ---------- automatizaciones ---------- */
+S.autoEvents=null;
+async function loadAuto(){try{const r=await api("/api/automations");S.autoEvents=r.events||[];S.autoVerify=r.verifyConfigured}catch(e){S.autoEvents=S.autoEvents||[]}}
+function autoStats(evs){const sent=evs.filter(x=>x.status==="sent"),clicks=sent.reduce((a,x)=>a+Object.values(x.clicks||{}).reduce((s,n)=>s+n,0),0),people=sent.filter(x=>x.clicks&&Object.keys(x.clicks).length).length;
+  return {comments:evs.length,sent:sent.length,clicks,people,errors:evs.filter(x=>x.status==="error").length}}
+function autoEditor(e){
+  const a=e.automation||{},on=!!a.on,nets=a.nets||["ig","fb"],btn=a.buttons||[{label:"Ver la guía",url:""},{label:"Escribir por WhatsApp",url:""}];
+  const evs=(S.autoEvents||[]).filter(x=>x.item_id===e.id),st=autoStats(evs);
+  const linked=linksOf(e);
+  return `<div class="field autobox ${on?"on":""}"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+    <div><span class="lbl">⚡ Automatización</span><div class="words">Comentan la keyword → les llega un DM</div></div>
+    <label class="swl"><input type="checkbox" id="au-on" ${on?"checked":""}><span></span></label></div>
+   ${!e.keyword?`<div class="words" style="color:var(--warn)">Escribe la keyword arriba para activarla.</div>`:""}
+   ${on&&!linked.ig&&!linked.fb?`<div class="words" style="color:var(--warn)">Vincula la publicación de Instagram o Facebook (en Métricas → publicaciones vinculadas) para que la automatización sepa en qué reel escuchar.</div>`:""}
+   <div class="stagepick">${[["ig","Instagram"],["fb","Facebook"]].map(([n,l])=>`<label class="chk"><input type="checkbox" id="au-n-${n}" ${nets.includes(n)?"checked":""}>${l}</label>`).join("")}<span class="words">TikTok no permite DMs automáticos</span></div>
+   <label class="field"><span class="lbl">Respuesta pública · una por línea, se rotan</span><textarea id="au-replies" rows="3" placeholder="¡Listo! Te lo mandé por DM 📩&#10;Revisa tus mensajes 👀&#10;Ya te llegó por DM">${esc(a.replies||"")}</textarea></label>
+   <label class="field"><span class="lbl">Mensaje directo</span><textarea id="au-dm" rows="4" placeholder="Hola 👋 Aquí tienes la guía…">${esc(a.dm||"")}</textarea></label>
+   <div class="field"><span class="lbl">Botones del DM</span>${[0,1].map(k=>`<div class="aubtn"><input id="au-bl-${k}" placeholder="Texto del botón" value="${esc(btn[k]?.label||"")}" maxlength="20"><input id="au-bu-${k}" placeholder="${k?"https://wa.me/5281XXXXXXXX":"https://… link de la guía"}" value="${esc(btn[k]?.url||"")}"></div>`).join("")}</div>
+   ${evs.length?`<div class="stats3"><div><b>${st.comments}</b><span>comentaron</span></div><div><b>${st.sent}</b><span>DMs enviados</span></div><div><b>${st.clicks}</b><span>clics en botones</span></div></div>`:""}
+  </div>`;
+}
+function vAuto(){
+  if(S.autoEvents===null){loadAuto().then(()=>{if(S.view==="auto")refreshView()});}
+  const evs=S.autoEvents||[],st=autoStats(evs);
+  const autos=all().filter(i=>i.automation?.on||i.automation?.dm);
+  const ago2=t=>ago(new Date(t).getTime());
+  const pill=s=>({sent:'<span class="pill p-ok">DM enviado</span>',repeat:'<span class="pill p-bad">No se repite</span>',error:'<span class="pill p-bad">Error</span>',pending:'<span class="pill p-wa">Enviando…</span>'})[s]||"";
+  const rows=autos.map(i=>{const e2=evs.filter(x=>x.item_id===i.id),s2=autoStats(e2);return `<div class="arow"><span style="display:flex;align-items:center;gap:6px;min-width:0"><a href="#" data-open="${i.id}" class="t">${esc(i.title||"Sin título")}</a><span class="ktag">${esc(i.keyword||"—")}</span></span><span class="num">${num(metricsOf(i).views||0)}</span><span class="num">${s2.comments}</span><span class="num">${s2.sent}</span><span class="num">${s2.clicks}</span><span>${i.automation?.on?'<span class="pill p-ok">Activa</span>':'<span class="pill">Pausada</span>'}</span></div>`}).join("");
+  return `${banner()}<div class="head"><div><div class="eyebrow">Instagram · Facebook</div><h1>Automatizaciones <em>en vivo</em></h1></div>
+   <div class="tools"><button class="btn" data-autore>↻ Actualizar</button><button class="btn" data-autosub>Reconectar avisos de Meta</button></div></div>
+   ${S.autoVerify===false?`<div class="banner">Falta configurar <b>META_VERIFY_TOKEN</b> en Vercel y los webhooks en Meta (ver README → Automatizaciones).</div>`:""}
+   <div class="kpis"><div class="kpi"><div class="k">Comentarios con keyword</div><div class="v">${st.comments}</div><div class="s">últimos 30 días</div></div>
+    <div class="kpi"><div class="k">DMs enviados</div><div class="v">${st.sent}</div><div class="s">${st.errors?`${st.errors} con error`:"sin errores"}</div></div>
+    <div class="kpi"><div class="k">Clics en botones</div><div class="v">${st.clicks}</div><div class="s">${st.people} personas</div></div>
+    <div class="kpi"><div class="k">DM → clic</div><div class="v">${st.sent?(st.people/st.sent*100).toFixed(1)+"%":"—"}</div><div class="s">de quienes recibieron el DM</div></div></div>
+   <section class="panel" style="margin-bottom:16px"><h3>Por pieza <small>activa la automatización dentro de cada pieza</small></h3>
+    ${autos.length?`<div class="tbl-wrap" style="border:0;background:none"><div class="arow h lbl"><span>Pieza · keyword</span><span class="num">Reprod.</span><span class="num">Coment.</span><span class="num">DMs</span><span class="num">Clics</span><span></span></div>${rows}</div>`:`<div class="empty">Abre una pieza, escribe su keyword y prende ⚡ Automatización.</div>`}</section>
+   <section class="panel"><h3>Actividad reciente <small>${evs.length} en 30 días</small></h3>
+    ${evs.length?`<div class="list">${evs.slice(0,40).map(x=>{const it=S.items.get(x.item_id);return `<div class="alog"><span class="av">${esc((x.user_name||"?").replace("@","").slice(0,2).toUpperCase())}</span><div style="min-width:0"><div>${esc(x.user_name||"Alguien")} comentó <b>“${esc((x.text||"").slice(0,60))}”</b></div><div class="words">${NETN[x.provider]||""} · ${esc(it?.title||"")} · ${ago2(x.created_at)}${x.error?` · ${esc(x.error)}`:""}</div></div>${pill(x.status)}</div>`}).join("")}</div>`:`<div class="empty">Aquí verás cada comentario con keyword y si se mandó el DM.</div>`}</section>`;
+}
 /* ---------- editor ---------- */
 function openEditor(id,over){
+  if(S.autoEvents===null)loadAuto().then(()=>{if(S.editing)renderEditor()});
   const it=id?S.items.get(id):null;
   S.editing=it?JSON.parse(JSON.stringify(it)):newItem(over);
   S.editingIsNew=!it;
@@ -938,6 +1001,7 @@ function renderEditor(){
     <div class="field"><label class="lbl" for="e-script">Copy</label><textarea id="e-script" rows="6">${esc(e.script)}</textarea></div>`}
     <div class="fields"><div class="field"><label class="lbl" for="e-cta">CTA</label><input id="e-cta" value="${esc(e.cta)}"></div>
      <div class="field"><label class="lbl" for="e-keyword">Keyword</label><input id="e-keyword" value="${esc(e.keyword)}" placeholder="ANTICIPO"></div></div>
+    ${autoEditor(e)}
     <div class="field"><span class="lbl" style="display:flex;justify-content:space-between"><span>Checklist de producción</span><span>${(e.checklist||[]).filter(x=>x.d).length}/${(e.checklist||[]).length}</span></span>
      <div class="check">${(e.checklist||[]).map((c,k)=>`<div class="ck ${c.d?"done":""}"><input type="checkbox" id="ck-${k}" data-ck="${k}" ${c.d?"checked":""} aria-label="Hecho"><input type="text" id="ckt-${k}" data-ckt="${k}" value="${esc(c.t)}"><button class="x" data-ckx="${k}" aria-label="Quitar">×</button></div>`).join("")}
       <button class="btn ghost" style="align-self:flex-start" data-ckadd>+ Agregar paso</button></div></div>
@@ -958,6 +1022,9 @@ function renderEditor(){
 function readEditor(){
   const e=S.editing;if(!e)return;
   const v=id=>document.getElementById(id)?.value??"";
+  if(document.getElementById("au-on")){const g=id=>document.getElementById(id);
+    e.automation={on:g("au-on").checked,nets:["ig","fb"].filter(n=>g("au-n-"+n)?.checked),replies:g("au-replies").value,dm:g("au-dm").value,
+      buttons:[0,1].map(k=>({label:g("au-bl-"+k).value.trim(),url:g("au-bu-"+k).value.trim()})).filter(b=>b.label||b.url)}}
   Object.assign(e,{links:Object.fromEntries(LINK_NETS.map(n=>[n,v("e-lk-"+n)]).filter(x=>x[1])),linkedPost:null,title:v("e-title").trim(),...(document.getElementById("e-date")?{date:v("e-date"),time:readTime("e-time")}:{}),...(document.getElementById("e-rdate")?{recDate:v("e-rdate"),recTime:readTime("e-rtime")}:{}),pillar:v("e-pillar"),cta:v("e-cta"),keyword:v("e-keyword").toUpperCase(),notes:v("e-notes")});
   document.querySelectorAll("[data-ckt]").forEach(el=>{const c=e.checklist[+el.dataset.ckt];if(c)c.t=el.value});
   if(document.getElementById("e-hook")){e.hook=v("e-hook");e.script=v("e-script")}
@@ -1279,7 +1346,7 @@ document.addEventListener("input",ev=>{
 window.addEventListener("beforeunload",ev=>{if(P.files.some(f=>f.status==="uploading")||P.busy){ev.preventDefault();ev.returnValue=""}});
 
 /* ---------- render ---------- */
-function viewHTML(){return({inicio:vInicio,calendario:vCalendario,pipeline:vPipeline,guiones:vGuiones,metricas:vMetricas,redes:vRedes,publicar:vPublicar})[S.view]()}
+function viewHTML(){return({inicio:vInicio,calendario:vCalendario,pipeline:vPipeline,guiones:vGuiones,metricas:vMetricas,redes:vRedes,publicar:vPublicar,auto:vAuto})[S.view]()}
 function render(){
   renderNav();
   document.body.dataset.view=S.view;
@@ -1304,6 +1371,8 @@ document.addEventListener("click",ev=>{
   if(d.script){S.scriptId=d.script;render();return}
   if(d.scriptback!==undefined){S.scriptId=null;render();return}
   if(d.mnav!==undefined){const n=+d.mnav;const t0=new Date();S.month=n===0?new Date(t0.getFullYear(),t0.getMonth(),1):new Date(S.month.getFullYear(),S.month.getMonth()+n,1);if(n===0)S.selDay=TODAY;render();return}
+  if(d.autore!==undefined){S.autoEvents=null;render();return}
+  if(d.autosub!==undefined){api("/api/automations?action=subscribe",{method:"POST"}).then(()=>toast("Avisos de Meta reconectados")).catch(e=>toast("No se pudo: "+e.message,6000));return}
   if(d.metnet){S.metNet=d.metnet;render();return}
   if(d.calfmt){S.calFmt=d.calfmt;render();return}
   if(d.net){S.redesNet=d.net;render();return}

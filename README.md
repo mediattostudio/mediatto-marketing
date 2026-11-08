@@ -138,3 +138,14 @@ Meta solo da reproducciones y alcance de los posts de la página con el permiso 
 1. Meta for Developers → tu app → **Casos de uso → Administrar páginas → Permisos y funciones** → `read_insights` → **Agregar** (debe quedar "Listo para la prueba").
 2. Vercel → Environment Variables → `META_READ_INSIGHTS=1` → Redeploy.
 3. En la app: **Redes → Reconectar** Instagram + Facebook → **Actualizar ahora**.
+
+## Automatizaciones (comentario con keyword → DM)
+
+1. Supabase → SQL Editor → corre `supabase/automatizaciones.sql`.
+2. Vercel → `META_VERIFY_TOKEN=<texto al azar>` → Redeploy.
+3. App: Redes → Reconectar Instagram + Facebook (acepta los permisos nuevos).
+4. Meta for Developers → tu app → **Webhooks**:
+   - Producto **Instagram** → URL `https://mediatto-marketing.vercel.app/api/webhook/meta`, token = `META_VERIFY_TOKEN` → suscribir campo **comments**.
+   - Producto **Page** → misma URL y token → suscribir campo **feed**.
+5. Publicar la app (modo Activo).
+6. En cada pieza: keyword + publicación vinculada + ⚡ Automatización encendida.

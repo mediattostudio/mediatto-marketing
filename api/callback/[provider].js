@@ -1,4 +1,5 @@
 import { isAuthed, getCookie, setCookie, saveConnection, redirect, appUrl } from "../../lib/core.js";
+import { subscribePage } from "../../lib/automations.js";
 import { metaExchange, tiktokExchange, syncMeta, syncTikTok } from "../../lib/providers.js";
 
 // La red regresa aquí después de que autorizas
@@ -15,6 +16,7 @@ export default async function handler(req, res) {
     if (p === "meta") {
       const data = await metaExchange(req.query.code);
       await saveConnection("meta", data);
+      await subscribePage(data).catch(() => {});
       await syncMeta().catch(() => {});
       return back(data.ig ? `Conectado: ${data.page.name} + @${data.ig.username}` : `Conectado: ${data.page.name}. Esta página no tiene Instagram profesional vinculado.`, true);
     }
