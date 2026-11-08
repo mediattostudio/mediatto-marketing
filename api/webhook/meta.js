@@ -23,6 +23,12 @@ export default async function handler(req, res) {
   if (!validSignature(raw, req.headers["x-hub-signature-256"])) return res.status(401).send("bad signature");
   let body; try { body = JSON.parse(raw); } catch { return res.status(400).end(); }
   const jobs = [];
+  // Si la página manda aquí sus avisos, los de formularios (leadgen) le tocan al CRM: se los reenviamos tal cual
+  if (body.object === "page" && /"field":"leadgen"/.test(raw)) {
+    jobs.push(fetch(process.env.CRM_WEBHOOK_URL || "https://leads-mediatto.vercel.app/api/webhook", {
+      method: "POST", headers: { "Content-Type": "application/json", "x-hub-signature-256": req.headers["x-hub-signature-256"] }, body: raw,
+    }));
+  }
   for (const entry of body.entry || []) {
     for (const ch of entry.changes || []) {
       const v = ch.value || {};
