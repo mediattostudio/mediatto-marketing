@@ -130,3 +130,11 @@ supabase/schema.sql      Tablas
 supabase/publicar.sql    Tabla de publicaciones + reloj de 5 min
 vercel.json              Cron diario
 ```
+
+## Reproducciones y alcance de Facebook
+
+Meta solo da reproducciones y alcance de los posts de la página con el permiso `read_insights`:
+
+1. Meta for Developers → tu app → **Casos de uso → Administrar páginas → Permisos y funciones** → `read_insights` → **Agregar** (debe quedar "Listo para la prueba").
+2. Vercel → Environment Variables → `META_READ_INSIGHTS=1` → Redeploy.
+3. En la app: **Redes → Reconectar** Instagram + Facebook → **Actualizar ahora**.

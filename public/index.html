@@ -542,13 +542,13 @@ const LINK_NETS=["ig","fb","tiktok"];
 function linksOf(i){const l={...(i.links||{})};if(i.linkedPost&&!Object.values(l).includes(i.linkedPost)){const pr=i.linkedPost.split(":")[0];if(!l[pr])l[pr]=i.linkedPost}return l}
 const linkedPostsOf=i=>Object.values(linksOf(i)).map(postById).filter(Boolean);
 // Métricas: suma de todas las redes vinculadas; lo capturado a mano se usa solo donde no hay dato automático
-function metricsNet(i,n){const p=postById(linksOf(i)[n]);if(!p)return null;const m={};AUTO_KEYS.forEach(k=>m[k]=+p[k]||0);return m}
-const NA={fb:["views","reach","saves"],tiktok:["reach","saves"],ig:[]};
+function metricsNet(i,n){const p=postById(linksOf(i)[n]);if(!p)return null;const m={};AUTO_KEYS.forEach(k=>m[k]=p[k]==null?null:+p[k]||0);return m}
+const NA={fb:["saves"],tiktok:["reach","saves"],ig:[]};
 const NET_COLS=[["views","Reprod."],["reach","Alcance"],["likes","Likes"],["comments","Coment."],["saves","Guard."],["shares","Compart."]];
 function netTable(i){
   const rows=LINK_NETS.map(n=>[n,metricsNet(i,n)]).filter(r=>r[1]);if(!rows.length)return "";
-  const tot={};NET_COLS.forEach(([k])=>tot[k]=rows.reduce((a,[,m])=>a+m[k],0));
-  const cell=(m,k,n)=>NA[n].includes(k)?'<td class="num words">—</td>':`<td class="num">${num(m[k])}</td>`;
+  const tot={};NET_COLS.forEach(([k])=>tot[k]=rows.reduce((a,[,m])=>a+(m[k]||0),0));
+  const cell=(m,k,n)=>NA[n].includes(k)||m[k]==null?'<td class="num words">—</td>':`<td class="num">${num(m[k])}</td>`;
   return `<div class="tbl-wrap" style="margin-top:8px"><table class="nettbl"><thead><tr><th>Red</th>${NET_COLS.map(c=>`<th class="num">${c[1]}</th>`).join("")}</tr></thead><tbody>
    ${rows.map(([n,m])=>`<tr><td><span class="netdot n-${n}"></span>${NETN[n]}</td>${NET_COLS.map(([k])=>cell(m,k,n)).join("")}</tr>`).join("")}
    ${rows.length>1?`<tr class="tot"><td>Total</td>${NET_COLS.map(([k])=>`<td class="num">${num(tot[k])}</td>`).join("")}</tr>`:""}</tbody></table></div>`;
@@ -691,15 +691,16 @@ function vGuiones(){
    </div>`;
 }
 function netCompare(pub){
-  const rows=LINK_NETS.map(n=>{const its=pub.filter(i=>linksOf(i)[n]&&metricsNet(i,n));const s=k=>its.reduce((a,i)=>a+metricsNet(i,n)[k],0);
-    const inter=s("likes")+s("comments")+s("saves")+s("shares");return {n,c:its.length,views:s("views"),inter,eng:s("views")?inter/s("views")*100:null}}).filter(r=>r.c);
+  const rows=LINK_NETS.map(n=>{const its=pub.filter(i=>linksOf(i)[n]&&metricsNet(i,n));const s=k=>its.reduce((a,i)=>a+(metricsNet(i,n)[k]||0),0);
+    const hasViews=its.some(i=>metricsNet(i,n).views!=null);
+    const inter=s("likes")+s("comments")+s("saves")+s("shares");return {n,c:its.length,views:s("views"),hasViews,inter,eng:hasViews&&s("views")?inter/s("views")*100:null}}).filter(r=>r.c);
   if(!rows.length)return "";
   const mx=Math.max(1,...rows.map(r=>Math.max(r.views,r.inter)));
   return `<section class="panel" style="margin-bottom:16px"><h3>Por red <small>piezas publicadas y vinculadas</small></h3>
    <div class="netcmp">${rows.map(r=>`<div class="nc"><div class="nh"><span class="netdot n-${r.n}"></span><b>${NETN[r.n]}</b><span class="words">${r.c} pieza${r.c>1?"s":""}</span></div>
-    <div class="hbar"><span>Reproducciones</span><div class="b"><i style="width:${r.views/mx*100}%"></i></div><b>${r.n==="fb"?"—":num(r.views)}</b></div>
+    <div class="hbar"><span>Reproducciones</span><div class="b"><i style="width:${r.views/mx*100}%"></i></div><b>${r.hasViews?num(r.views):"—"}</b></div>
     <div class="hbar"><span>Interacciones</span><div class="b"><i style="width:${r.inter/mx*100}%;background:var(--ink)"></i></div><b>${num(r.inter)}</b></div>
-    <div class="words">Engagement: ${r.eng==null||r.n==="fb"?"—":r.eng.toFixed(1)+"%"}</div></div>`).join("")}</div></section>`;
+    <div class="words">Engagement: ${r.eng==null?"—":r.eng.toFixed(1)+"%"}</div></div>`).join("")}</div></section>`;
 }
 function vMetricas(){
   const net=S.metNet||"todas";
