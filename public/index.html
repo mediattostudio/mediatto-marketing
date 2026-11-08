@@ -974,7 +974,7 @@ function autoEditor(e){
 }
 function vAuto(){
   if(S.autoEvents===null){loadAuto().then(()=>{if(S.view==="auto")refreshView()});}
-  const all_=S.autoEvents||[],evs=all_.filter(x=>x.status!=="hook"),st=autoStats(evs);
+  const all_=S.autoEvents||[],evs=all_.filter(x=>x.status!=="hook"&&(x.status!=="skip"||/propia cuenta/.test(x.error||""))),st=autoStats(evs);
   const hooks=all_.filter(x=>x.status==="hook"),lastHook=hooks[0];
   const autos=all().filter(i=>i.automation?.on||i.automation?.dm||i.keyword&&i.stage==="publicado").sort((a,b)=>(b.automation?.on?1:0)-(a.automation?.on?1:0)||(b.date||"").localeCompare(a.date||""));
   if(!S.autoSel||!S.items.get(S.autoSel))S.autoSel=autos[0]?.id||null;
