@@ -996,7 +996,13 @@ function vAuto(){
      ${evs.length?`<div class="list">${evs.slice(0,40).map(x=>{const it=S.items.get(x.item_id);return `<div class="alog"><span class="av">${esc((x.user_name||"?").replace("@","").slice(0,2).toUpperCase())}</span><div style="min-width:0"><div>${esc(x.user_name||"Alguien")} comentó <b>“${esc((x.text||"").slice(0,60))}”</b></div><div class="words">${NETN[x.provider]||""}${it?` · ${esc(it.title)}`:""} · ${ago2(x.created_at)}${x.error?` · ${esc(x.error)}`:""}</div></div>${pill(x)}</div>`}).join("")}</div>`:`<div class="empty">Aquí verás cada comentario con keyword y si se mandó el DM.</div>`}</section>
    </div></div>`;
 }
-function autoPanel(i,evs){
+S.autoDraft={};
+function readAxForm(){const g=id=>document.getElementById(id);if(!g("ax-on"))return null;
+  return {keyword:g("ax-kw").value,automation:{on:g("ax-on").checked,nets:["ig","fb"].filter(n=>g("ax-n-"+n)?.checked),replies:g("ax-replies").value,dm:g("ax-dm").value,
+    buttons:[0,1].map(k=>({label:g("ax-bl-"+k).value,url:g("ax-bu-"+k).value}))}}}
+function autoPanel(i0,evs){
+  // Lo que escribiste y no has guardado se conserva aunque la pantalla se actualice sola
+  const dr=S.autoDraft[i0.id],i=dr?{...i0,keyword:dr.keyword,automation:dr.automation}:i0;
   const a=i.automation||{},nets=a.nets||["ig","fb"],btn=a.buttons||[{label:"Ver la guía",url:""},{label:"Escribir por WhatsApp",url:""}],st=autoStats(evs),L=linksOf(i);
   return `<div class="panel autopanel ${a.on?"on":""}">
    <div class="lbl">Pieza · ${esc((FORMATS.find(f=>f[0]===i.format)||["",""])[1])} · ${esc(i.title||"")}</div>
@@ -1009,7 +1015,7 @@ function autoPanel(i,evs){
     <div class="dmprev"><textarea id="ax-dm" rows="4" class="bub" placeholder="Hola 👋 Aquí tienes la guía…">${esc(a.dm||"")}</textarea>
      ${[0,1].map(k=>`<div class="dmbtn"><input id="ax-bl-${k}" value="${esc(btn[k]?.label||"")}" placeholder="${k?"💬 Escribir por WhatsApp":"📄 Ver la guía"}" maxlength="20"><input id="ax-bu-${k}" value="${esc(btn[k]?.url||"")}" placeholder="${k?"https://wa.me/5281…":"https://… link"}"></div>`).join("")}</div></div>
    <div class="stats3"><div><b>${st.comments}</b><span>comentaron</span></div><div><b>${st.sent}</b><span>DMs enviados</span></div><div><b>${st.clicks}</b><span>clics</span></div></div>
-   <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-open="${i.id}">Abrir pieza</button><button class="btn primary" data-axsave="${i.id}">Guardar</button></div>
+   <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-open="${i.id}">Abrir pieza</button>${dr?'<span class="words" style="color:var(--warn);margin-right:auto;align-self:center">Cambios sin guardar</span>':""}<button class="btn primary" data-axsave="${i.id}">Guardar</button></div>
   </div>`;
 }
 /* ---------- editor ---------- */
@@ -1372,7 +1378,8 @@ document.addEventListener("click",ev=>{
   if(d.pdel){api("/api/publish?id="+encodeURIComponent(d.pdel),{method:"DELETE"}).then(()=>{S.pubs=S.pubs.filter(p=>p.id!==d.pdel);render()}).catch(e=>toast(e.message,5000));return}
 });
 document.addEventListener("change",ev=>{
-  const el=ev.target;if(S.view!=="publicar")return;
+  const el=ev.target;
+  if(el.id&&el.id.startsWith("ax-")&&S.autoSel){const f=readAxForm();if(f)S.autoDraft[S.autoSel]=f}if(S.view!=="publicar")return;
   if(el.dataset.pfile!==undefined){const fl=el.files;if(fl&&fl.length)addFiles(fl);el.value="";return}
   if(el.id==="p-item"){if(el.value)fillFromItem(el.value);else P.itemId="";render();return}
   if(el.id==="p-ad"||/^p-at-/.test(el.id)){const d=document.getElementById("p-ad")?.value||"";P.at=d?`${d}T${readTime("p-at")}`:"";render();return}
@@ -1381,7 +1388,8 @@ document.addEventListener("change",ev=>{
     if(el.dataset.tt==="branded"&&el.checked&&P.tt.privacy==="SELF_ONLY"){P.tt.privacy="";toast("El contenido de marca no puede ser privado: elige otra privacidad",4000)}render();return}
 });
 document.addEventListener("input",ev=>{
-  const el=ev.target;if(S.view!=="publicar")return;
+  const el=ev.target;
+  if(el.id&&el.id.startsWith("ax-")&&S.autoSel){const f=readAxForm();if(f){const had=!!S.autoDraft[S.autoSel];S.autoDraft[S.autoSel]=f;if(!had){const b=document.querySelector("[data-axsave]");if(b&&!b.previousElementSibling?.matches(".words"))b.insertAdjacentHTML("beforebegin",'<span class="words" style="color:var(--warn);margin-right:auto;align-self:center">Cambios sin guardar</span>')}}}if(S.view!=="publicar")return;
   if(el.id==="p-cap"){P.caption=el.value;const n=document.getElementById("p-capn");if(n){n.textContent=`${el.value.length.toLocaleString("es-MX")} / 2,200`;n.classList.toggle("over",el.value.length>2200)}
     const h=document.getElementById("p-capt");if(h)h.textContent=`${(el.value.match(/#[\p{L}\p{N}_]+/gu)||[]).length} hashtags`;
     const b=document.querySelector("[data-psubmit]");if(b)b.disabled=!canSubmit();return}
@@ -1420,7 +1428,7 @@ document.addEventListener("click",ev=>{
   if(d.mnav!==undefined){const n=+d.mnav;const t0=new Date();S.month=n===0?new Date(t0.getFullYear(),t0.getMonth(),1):new Date(S.month.getFullYear(),S.month.getMonth()+n,1);if(n===0)S.selDay=TODAY;render();return}
   if(d.axsave){const it=S.items.get(d.axsave);if(!it)return;const g=id=>document.getElementById(id);
     persist({...it,keyword:g("ax-kw").value.trim().toUpperCase(),automation:{on:g("ax-on").checked,nets:["ig","fb"].filter(n=>g("ax-n-"+n)?.checked),replies:g("ax-replies").value,dm:g("ax-dm").value,
-      buttons:[0,1].map(k=>({label:g("ax-bl-"+k).value.trim(),url:g("ax-bu-"+k).value.trim()})).filter(b=>b.label||b.url)}},true);toast("Automatización guardada");render();return}
+      buttons:[0,1].map(k=>({label:g("ax-bl-"+k).value.trim(),url:g("ax-bu-"+k).value.trim()})).filter(b=>b.label||b.url)}},true);delete S.autoDraft[d.axsave];toast("Automatización guardada");render();return}
   if(t.dataset.autosel&&!ev.target.closest("label,input")){S.autoSel=t.dataset.autosel;render();return}
   if(d.autore!==undefined){S.autoEvents=null;render();return}
   if(d.autosub!==undefined){api("/api/automations?action=subscribe",{method:"POST"}).then(()=>toast("Avisos de Meta reconectados")).catch(e=>toast("No se pudo: "+e.message,6000));return}
