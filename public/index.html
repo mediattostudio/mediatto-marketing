@@ -536,15 +536,23 @@ function showLogin(){
 
 /* ---------- helpers ---------- */
 const all=()=>[...S.items.values()];
-const AUTO_KEYS=["views","likes","comments","saves","shares","reach"];
+const AUTO_KEYS=["views","likes","comments","saves","shares","reach","follows"];
+// Estimado de seguidores ganados: cambio en los seguidores totales de la red entre el día anterior y el día siguiente a la publicación
+function followEstimate(i){
+  const d=i.date;if(!d)return null;let tot=0,any=false;
+  const prev=iso(new Date(parse(d).getTime()-864e5)),next=iso(new Date(parse(d).getTime()+864e5));
+  Object.keys(linksOf(i)).forEach(n=>{const sn=S.snaps.filter(x=>x.provider===n);const a=sn.filter(x=>x.day<=prev).pop(),b=sn.filter(x=>x.day<=next).pop();
+    if(a&&b&&b.day>a.day){tot+=(+b.data.followers||0)-(+a.data.followers||0);any=true}});
+  return any?tot:null;
+}
 const postById=id=>S.posts.find(p=>p.id===id);
 const LINK_NETS=["ig","fb","tiktok"];
 function linksOf(i){const l={...(i.links||{})};if(i.linkedPost&&!Object.values(l).includes(i.linkedPost)){const pr=i.linkedPost.split(":")[0];if(!l[pr])l[pr]=i.linkedPost}return l}
 const linkedPostsOf=i=>Object.values(linksOf(i)).map(postById).filter(Boolean);
 // Métricas: suma de todas las redes vinculadas; lo capturado a mano se usa solo donde no hay dato automático
 function metricsNet(i,n){const p=postById(linksOf(i)[n]);if(!p)return null;const m={};AUTO_KEYS.forEach(k=>m[k]=p[k]==null?null:+p[k]||0);return m}
-const NA={fb:["saves"],tiktok:["reach","saves"],ig:[]};
-const NET_COLS=[["views","Reprod."],["reach","Alcance"],["likes","Likes"],["comments","Coment."],["saves","Guard."],["shares","Compart."]];
+const NA={fb:["saves","follows"],tiktok:["reach","saves","follows"],ig:[]};
+const NET_COLS=[["views","Reprod."],["reach","Alcance"],["likes","Likes"],["comments","Coment."],["saves","Guard."],["shares","Compart."],["follows","Seguidores"]];
 function netTable(i){
   const rows=LINK_NETS.map(n=>[n,metricsNet(i,n)]).filter(r=>r[1]);if(!rows.length)return "";
   const tot={};NET_COLS.forEach(([k])=>tot[k]=rows.reduce((a,[,m])=>a+(m[k]||0),0));
@@ -553,7 +561,7 @@ function netTable(i){
    ${rows.map(([n,m])=>`<tr><td><span class="netdot n-${n}"></span>${NETN[n]}</td>${NET_COLS.map(([k])=>cell(m,k,n)).join("")}</tr>`).join("")}
    ${rows.length>1?`<tr class="tot"><td>Total</td>${NET_COLS.map(([k])=>`<td class="num">${num(tot[k])}</td>`).join("")}</tr>`:""}</tbody></table></div>`;
 }
-function metricsOf(i){const m={...(i.metrics||{})};const ps=linkedPostsOf(i);if(ps.length)AUTO_KEYS.forEach(k=>{const t=ps.reduce((a,p)=>a+(+p[k]||0),0);if(t||m[k]==null)m[k]=t});return m}
+function metricsOf(i){const m={...(i.metrics||{})};const ps=linkedPostsOf(i);if(ps.length)AUTO_KEYS.forEach(k=>{if(k==="follows"&&!ps.some(p=>p.follows!=null))return;const t=ps.reduce((a,p)=>a+(+p[k]||0),0);if(t||m[k]==null)m[k]=t});return m}
 const NETN={ig:"Instagram",fb:"Facebook",tiktok:"TikTok"};
 const localDay=t=>iso(new Date(t));
 const ago=t=>{if(!t)return"nunca";const m=Math.round((Date.now()-t)/6e4);return m<1?"hace un momento":m<60?`hace ${m} min`:m<1440?`hace ${Math.round(m/60)} h`:`hace ${Math.round(m/1440)} d`};
@@ -739,7 +747,8 @@ function vMetricas(){
    <section class="panel"><h3>Piezas publicadas <small>edita los números directo en la tabla</small></h3>
     ${pub.length?`<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Pieza</th><th>Formato</th>${cols.map(c=>`<th class="num">${c[1]}</th>`).join("")}</tr></thead><tbody>
      ${pub.map(i=>`<tr><td style="font-family:var(--f-mono);font-size:11.5px">${fmtShort(i.date)}</td><td style="max-width:240px;overflow:hidden;text-overflow:ellipsis"><a href="#" data-open="${i.id}" style="color:var(--ink)">${esc(i.title||"Sin título")}</a></td><td>${fchip(i.format)}</td>
-       ${cols.map(c=>{if(net!=="todas")return `<td class="num">${num(M(i,c[0]))}</td>`;const lp=linkedPostsOf(i),auto=lp.length&&AUTO_KEYS.includes(c[0]);return auto?`<td class="num" title="Automático: ${lp.map(p=>NETN[p.provider]).join(" + ")}">${num(M(i,c[0]))} <span class="auto">AUTO</span></td>`:`<td class="num"><input id="m-${i.id}-${c[0]}" inputmode="numeric" data-metric="${i.id}" data-k="${c[0]}" value="${i.metrics?.[c[0]]??""}" placeholder="0"></td>`}).join("")}</tr>`).join("")}
+       ${cols.map(c=>{if(net!=="todas")return `<td class="num">${num(M(i,c[0]))}</td>`;const lp=linkedPostsOf(i),auto=lp.length&&AUTO_KEYS.includes(c[0])&&(c[0]!=="follows"||lp.some(p=>p.follows!=null));
+       if(c[0]==="follows"&&!auto){const est=followEstimate(i);return `<td class="num"><input id="m-${i.id}-follows" inputmode="numeric" data-metric="${i.id}" data-k="follows" value="${i.metrics?.follows??""}" placeholder="${est==null?"0":"≈"+(est>0?"+":"")+num(est)}" title="${est==null?"":"Estimado: cambio de seguidores del día anterior al día siguiente de publicar (incluye todo lo que pasó esos días)"}"></td>`}return auto?`<td class="num" title="Automático: ${lp.map(p=>NETN[p.provider]).join(" + ")}">${num(M(i,c[0]))} <span class="auto">AUTO</span></td>`:`<td class="num"><input id="m-${i.id}-${c[0]}" inputmode="numeric" data-metric="${i.id}" data-k="${c[0]}" value="${i.metrics?.[c[0]]??""}" placeholder="0"></td>`}).join("")}</tr>`).join("")}
     </tbody></table></div>`:`<div class="empty">Aún no hay piezas publicadas. Mueve una a “Publicado” en el pipeline.</div>`}
    </section>`;
 }
