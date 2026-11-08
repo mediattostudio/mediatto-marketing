@@ -292,6 +292,26 @@ tr:last-child td{border-bottom:0}
 .pill{font:500 10.5px var(--f-mono);padding:2px 8px;border-radius:99px;white-space:nowrap;border:1px solid var(--line);color:var(--muted)}
 .p-ok{background:rgba(111,178,131,.15);color:var(--ok);border-color:transparent}.p-wa{background:var(--gold-soft);color:var(--gold);border-color:transparent}.p-bad{background:rgba(217,115,95,.15);color:var(--bad);border-color:transparent}
 @media (max-width:860px){.arow{grid-template-columns:1fr 50px 44px 44px}.arow>:nth-child(2),.arow>:nth-child(6){display:none}.aubtn{grid-template-columns:1fr}}
+
+.autogrid{display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:20px;align-items:start}
+.autoleft{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}
+.autoright{display:flex;flex-direction:column;gap:16px;min-width:0}
+.autoright .kpis{margin-bottom:0}
+.autopanel{display:flex;flex-direction:column;gap:12px}.autopanel.on{border-color:var(--gold)}
+.autopanel .f{display:flex;flex-direction:column;gap:5px}
+.autopanel input:not([type=checkbox]),.autopanel textarea{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--raised);width:100%;min-width:0;resize:vertical}
+.autopanel .kwin{font:700 14px var(--f-mono);letter-spacing:.06em}
+.chk.off{opacity:.55}
+.dmprev{background:#0E0E0D;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.dmprev .bub{background:#26262A!important;border:0!important;border-radius:16px 16px 16px 4px!important;color:#F2EEE6;font-size:13px}
+.dmbtn{display:grid;grid-template-columns:1fr 1.3fr;gap:6px}
+.dmbtn input{background:#141416!important;border-color:#3A3A3F!important;color:#9BB8FF;font-weight:600;font-size:12.5px}
+.arow{cursor:pointer;border-radius:8px}.arow:hover{background:var(--gold-soft)}.arow.sel{background:var(--gold-soft);box-shadow:inset 3px 0 0 var(--gold)}
+.arow.h{cursor:default}.arow.h:hover{background:none}
+.swl.sm{width:36px;height:22px}.swl.sm span:after{width:16px;height:16px}.swl.sm input:checked+span:after{left:17px}
+.hookline{font-family:var(--f-mono);font-size:11.5px;padding:8px 12px;border-radius:8px;border:1px solid var(--line)}
+.hookline.ok{color:var(--ok)}.hookline.bad{color:var(--warn);border-color:var(--warn)}
+@media (max-width:1100px){.autogrid{grid-template-columns:1fr}.autoleft{position:static;order:2}}
 .links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .links .lk{display:flex;flex-direction:column;gap:4px;min-width:0}
 .links .lk span{font:500 10px var(--f-mono);letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
@@ -928,7 +948,7 @@ function readTime(pre){
 /* ---------- automatizaciones ---------- */
 S.autoEvents=null;
 async function loadAuto(){try{const r=await api("/api/automations");S.autoEvents=r.events||[];S.autoVerify=r.verifyConfigured}catch(e){S.autoEvents=S.autoEvents||[]}}
-function autoStats(evs){const sent=evs.filter(x=>x.status==="sent"),clicks=sent.reduce((a,x)=>a+Object.values(x.clicks||{}).reduce((s,n)=>s+n,0),0),people=sent.filter(x=>x.clicks&&Object.keys(x.clicks).length).length;
+function autoStats(evs){evs=evs.filter(x=>["sent","repeat","error","pending"].includes(x.status));const sent=evs.filter(x=>x.status==="sent"),clicks=sent.reduce((a,x)=>a+Object.values(x.clicks||{}).reduce((s,n)=>s+n,0),0),people=sent.filter(x=>x.clicks&&Object.keys(x.clicks).length).length;
   return {comments:evs.length,sent:sent.length,clicks,people,errors:evs.filter(x=>x.status==="error").length}}
 function autoEditor(e){
   const a=e.automation||{},on=!!a.on,nets=a.nets||["ig","fb"],btn=a.buttons||[{label:"Ver la guía",url:""},{label:"Escribir por WhatsApp",url:""}];
@@ -948,22 +968,49 @@ function autoEditor(e){
 }
 function vAuto(){
   if(S.autoEvents===null){loadAuto().then(()=>{if(S.view==="auto")refreshView()});}
-  const evs=S.autoEvents||[],st=autoStats(evs);
-  const autos=all().filter(i=>i.automation?.on||i.automation?.dm);
+  const all_=S.autoEvents||[],evs=all_.filter(x=>x.status!=="hook"),st=autoStats(evs);
+  const hooks=all_.filter(x=>x.status==="hook"),lastHook=hooks[0];
+  const autos=all().filter(i=>i.automation?.on||i.automation?.dm||i.keyword&&i.stage==="publicado").sort((a,b)=>(b.automation?.on?1:0)-(a.automation?.on?1:0)||(b.date||"").localeCompare(a.date||""));
+  if(!S.autoSel||!S.items.get(S.autoSel))S.autoSel=autos[0]?.id||null;
+  const sel=S.autoSel&&S.items.get(S.autoSel);
   const ago2=t=>ago(new Date(t).getTime());
-  const pill=s=>({sent:'<span class="pill p-ok">DM enviado</span>',repeat:'<span class="pill p-bad">No se repite</span>',error:'<span class="pill p-bad">Error</span>',pending:'<span class="pill p-wa">Enviando…</span>'})[s]||"";
-  const rows=autos.map(i=>{const e2=evs.filter(x=>x.item_id===i.id),s2=autoStats(e2);return `<div class="arow"><span style="display:flex;align-items:center;gap:6px;min-width:0"><a href="#" data-open="${i.id}" class="t">${esc(i.title||"Sin título")}</a><span class="ktag">${esc(i.keyword||"—")}</span></span><span class="num">${num(metricsOf(i).views||0)}</span><span class="num">${s2.comments}</span><span class="num">${s2.sent}</span><span class="num">${s2.clicks}</span><span>${i.automation?.on?'<span class="pill p-ok">Activa</span>':'<span class="pill">Pausada</span>'}</span></div>`}).join("");
-  return `${banner()}<div class="head"><div><div class="eyebrow">Instagram · Facebook</div><h1>Automatizaciones <em>en vivo</em></h1></div>
-   <div class="tools"><button class="btn" data-autore>↻ Actualizar</button><button class="btn" data-autosub>Reconectar avisos de Meta</button></div></div>
-   ${S.autoVerify===false?`<div class="banner">Falta configurar <b>META_VERIFY_TOKEN</b> en Vercel y los webhooks en Meta (ver README → Automatizaciones).</div>`:""}
-   <div class="kpis"><div class="kpi"><div class="k">Comentarios con keyword</div><div class="v">${st.comments}</div><div class="s">últimos 30 días</div></div>
-    <div class="kpi"><div class="k">DMs enviados</div><div class="v">${st.sent}</div><div class="s">${st.errors?`${st.errors} con error`:"sin errores"}</div></div>
-    <div class="kpi"><div class="k">Clics en botones</div><div class="v">${st.clicks}</div><div class="s">${st.people} personas</div></div>
-    <div class="kpi"><div class="k">DM → clic</div><div class="v">${st.sent?(st.people/st.sent*100).toFixed(1)+"%":"—"}</div><div class="s">de quienes recibieron el DM</div></div></div>
-   <section class="panel" style="margin-bottom:16px"><h3>Por pieza <small>activa la automatización dentro de cada pieza</small></h3>
-    ${autos.length?`<div class="tbl-wrap" style="border:0;background:none"><div class="arow h lbl"><span>Pieza · keyword</span><span class="num">Reprod.</span><span class="num">Coment.</span><span class="num">DMs</span><span class="num">Clics</span><span></span></div>${rows}</div>`:`<div class="empty">Abre una pieza, escribe su keyword y prende ⚡ Automatización.</div>`}</section>
-   <section class="panel"><h3>Actividad reciente <small>${evs.length} en 30 días</small></h3>
-    ${evs.length?`<div class="list">${evs.slice(0,40).map(x=>{const it=S.items.get(x.item_id);return `<div class="alog"><span class="av">${esc((x.user_name||"?").replace("@","").slice(0,2).toUpperCase())}</span><div style="min-width:0"><div>${esc(x.user_name||"Alguien")} comentó <b>“${esc((x.text||"").slice(0,60))}”</b></div><div class="words">${NETN[x.provider]||""} · ${esc(it?.title||"")} · ${ago2(x.created_at)}${x.error?` · ${esc(x.error)}`:""}</div></div>${pill(x.status)}</div>`}).join("")}</div>`:`<div class="empty">Aquí verás cada comentario con keyword y si se mandó el DM.</div>`}</section>`;
+  const pill=x=>({sent:'<span class="pill p-ok">DM enviado</span>',repeat:'<span class="pill p-bad">No se repite</span>',error:'<span class="pill p-bad">Error</span>',pending:'<span class="pill p-wa">Enviando…</span>',skip:'<span class="pill">Ignorado</span>'})[x.status]||"";
+  const rows=autos.map(i=>{const e2=evs.filter(x=>x.item_id===i.id),s2=autoStats(e2),on=!!i.automation?.on;
+    return `<div class="arow ${S.autoSel===i.id?"sel":""}" data-autosel="${i.id}"><span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="t">${esc(i.title||"Sin título")}</span><span class="ktag">${esc(i.keyword||"—")}</span></span><span class="num">${num(metricsOf(i).views||0)}</span><span class="num">${s2.comments}</span><span class="num">${s2.sent}</span><span class="num">${s2.clicks}</span><label class="swl sm" title="${on?"Pausar":"Activar"}"><input type="checkbox" data-autotoggle="${i.id}" ${on?"checked":""}><span></span></label></div>`}).join("");
+  const health=!lastHook?`<div class="hookline bad">● Meta todavía no ha mandado ningún aviso a la app. Revisa los webhooks (Instagram → comments, Page → feed) y toca “Reconectar avisos de Meta”.</div>`
+    :`<div class="hookline ok">● Último aviso de Meta: ${ago2(lastHook.created_at)} (${esc(lastHook.text)})</div>`;
+  return `${banner()}<div class="autogrid">
+   <div class="autoleft">${sel?autoPanel(sel,evs.filter(x=>x.item_id===sel.id)):`<div class="panel"><div class="empty">Abre una pieza publicada, ponle keyword y vincúlala para crear tu primera automatización.</div></div>`}</div>
+   <div class="autoright">
+    <div class="head" style="margin-bottom:0"><div><div class="eyebrow">Instagram · Facebook</div><h1>Automatizaciones <em>en vivo</em></h1></div>
+     <div class="tools"><button class="btn" data-autore>↻ Actualizar</button><button class="btn" data-autosub>Reconectar avisos de Meta</button></div></div>
+    ${health}
+    ${S.autoVerify===false?`<div class="banner">Falta <b>META_VERIFY_TOKEN</b> en Vercel.</div>`:""}
+    <div class="kpis"><div class="kpi"><div class="v">${st.comments}</div><div class="s">comentarios con keyword · 30 d</div></div>
+     <div class="kpi"><div class="v">${st.sent}</div><div class="s">DMs enviados${st.errors?` · ${st.errors} con error`:""}</div></div>
+     <div class="kpi"><div class="v">${st.clicks}</div><div class="s">clics en botones · ${st.people} personas</div></div>
+     <div class="kpi"><div class="v">${st.sent?(st.people/st.sent*100).toFixed(1)+"%":"—"}</div><div class="s">DM → clic</div></div></div>
+    <section class="panel"><h3>Por pieza <small>toca una para editarla</small></h3>
+     ${autos.length?`<div class="arow h lbl"><span>Pieza · keyword</span><span class="num">Reprod.</span><span class="num">Coment.</span><span class="num">DMs</span><span class="num">Clics</span><span></span></div>${rows}`:`<div class="empty">Aún no hay piezas con keyword.</div>`}</section>
+    <section class="panel"><h3>Actividad reciente <small>${evs.length} en 30 días</small></h3>
+     ${evs.length?`<div class="list">${evs.slice(0,40).map(x=>{const it=S.items.get(x.item_id);return `<div class="alog"><span class="av">${esc((x.user_name||"?").replace("@","").slice(0,2).toUpperCase())}</span><div style="min-width:0"><div>${esc(x.user_name||"Alguien")} comentó <b>“${esc((x.text||"").slice(0,60))}”</b></div><div class="words">${NETN[x.provider]||""}${it?` · ${esc(it.title)}`:""} · ${ago2(x.created_at)}${x.error?` · ${esc(x.error)}`:""}</div></div>${pill(x)}</div>`}).join("")}</div>`:`<div class="empty">Aquí verás cada comentario con keyword y si se mandó el DM.</div>`}</section>
+   </div></div>`;
+}
+function autoPanel(i,evs){
+  const a=i.automation||{},nets=a.nets||["ig","fb"],btn=a.buttons||[{label:"Ver la guía",url:""},{label:"Escribir por WhatsApp",url:""}],st=autoStats(evs),L=linksOf(i);
+  return `<div class="panel autopanel ${a.on?"on":""}">
+   <div class="lbl">Pieza · ${esc((FORMATS.find(f=>f[0]===i.format)||["",""])[1])} · ${esc(i.title||"")}</div>
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><h3 style="margin:0">⚡ Automatización</h3><div class="words">Comentan la palabra → les llega un DM</div></div>
+    <label class="swl"><input type="checkbox" id="ax-on" ${a.on?"checked":""}><span></span></label></div>
+   <label class="f"><span class="lbl">Palabra clave</span><input id="ax-kw" class="kwin" value="${esc(i.keyword||"")}" placeholder="PLAFÓN"><span class="words">Acepta mayúsculas, minúsculas, acentos y emojis</span></label>
+   <div class="f"><span class="lbl">Escuchando en</span><div class="stagepick">${[["ig","Instagram"],["fb","Facebook"]].map(([n,l])=>`<label class="chk ${L[n]?"":"off"}"><input type="checkbox" id="ax-n-${n}" ${nets.includes(n)?"checked":""}>${l}${L[n]?"":" · sin vincular"}</label>`).join("")}<span class="chk off">TikTok · no disponible</span></div></div>
+   <label class="f"><span class="lbl">Respuesta pública · una por línea</span><textarea id="ax-replies" rows="2" placeholder="¡Listo! Te lo mandé por DM 📩">${esc(a.replies||"")}</textarea></label>
+   <div class="f"><span class="lbl">Mensaje directo</span>
+    <div class="dmprev"><textarea id="ax-dm" rows="4" class="bub" placeholder="Hola 👋 Aquí tienes la guía…">${esc(a.dm||"")}</textarea>
+     ${[0,1].map(k=>`<div class="dmbtn"><input id="ax-bl-${k}" value="${esc(btn[k]?.label||"")}" placeholder="${k?"💬 Escribir por WhatsApp":"📄 Ver la guía"}" maxlength="20"><input id="ax-bu-${k}" value="${esc(btn[k]?.url||"")}" placeholder="${k?"https://wa.me/5281…":"https://… link"}"></div>`).join("")}</div></div>
+   <div class="stats3"><div><b>${st.comments}</b><span>comentaron</span></div><div><b>${st.sent}</b><span>DMs enviados</span></div><div><b>${st.clicks}</b><span>clics</span></div></div>
+   <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-open="${i.id}">Abrir pieza</button><button class="btn primary" data-axsave="${i.id}">Guardar</button></div>
+  </div>`;
 }
 /* ---------- editor ---------- */
 function openEditor(id,over){
@@ -1358,7 +1405,7 @@ function render(){
 
 /* ---------- events ---------- */
 document.addEventListener("click",ev=>{
-  const t=ev.target.closest("button,a,[data-cell],[data-day]");if(!t)return;
+  const t=ev.target.closest("button,a,[data-cell],[data-day],[data-autosel]");if(!t)return;
   const d=t.dataset;
   if(t.matches("a[data-open]"))ev.preventDefault();
   if(d.view){go(d.view);return}
@@ -1371,6 +1418,10 @@ document.addEventListener("click",ev=>{
   if(d.script){S.scriptId=d.script;render();return}
   if(d.scriptback!==undefined){S.scriptId=null;render();return}
   if(d.mnav!==undefined){const n=+d.mnav;const t0=new Date();S.month=n===0?new Date(t0.getFullYear(),t0.getMonth(),1):new Date(S.month.getFullYear(),S.month.getMonth()+n,1);if(n===0)S.selDay=TODAY;render();return}
+  if(d.axsave){const it=S.items.get(d.axsave);if(!it)return;const g=id=>document.getElementById(id);
+    persist({...it,keyword:g("ax-kw").value.trim().toUpperCase(),automation:{on:g("ax-on").checked,nets:["ig","fb"].filter(n=>g("ax-n-"+n)?.checked),replies:g("ax-replies").value,dm:g("ax-dm").value,
+      buttons:[0,1].map(k=>({label:g("ax-bl-"+k).value.trim(),url:g("ax-bu-"+k).value.trim()})).filter(b=>b.label||b.url)}},true);toast("Automatización guardada");render();return}
+  if(t.dataset.autosel&&!ev.target.closest("label,input")){S.autoSel=t.dataset.autosel;render();return}
   if(d.autore!==undefined){S.autoEvents=null;render();return}
   if(d.autosub!==undefined){api("/api/automations?action=subscribe",{method:"POST"}).then(()=>toast("Avisos de Meta reconectados")).catch(e=>toast("No se pudo: "+e.message,6000));return}
   if(d.metnet){S.metNet=d.metnet;render();return}
@@ -1405,6 +1456,7 @@ document.addEventListener("change",ev=>{
   if(el.dataset.sh!==undefined&&S.editing){readEditor();S.editing.shots[+el.dataset.sh].d=el.checked;renderEditor();return}
   if(el.dataset.ck!==undefined&&S.editing){readEditor();const c=S.editing.checklist[+el.dataset.ck];c.d=el.checked;
     if(c.d&&/program/i.test(c.t)&&["idea","guion","grabar","editar"].includes(S.editing.stage))S.editing.stage="listo";renderEditor();return}
+  if(el.dataset.autotoggle){const it=S.items.get(el.dataset.autotoggle);if(it){persist({...it,automation:{...(it.automation||{}),on:el.checked}},true);toast(el.checked?"Automatización activa":"Automatización pausada");render()}return}
   if(el.dataset.metric){const it=S.items.get(el.dataset.metric);if(!it)return;const v=el.value.replace(/[^\d.]/g,"");const m={...(it.metrics||{})};if(v==="")delete m[el.dataset.k];else m[el.dataset.k]=+v;persist({...it,metrics:m});render();return}
 });
 document.addEventListener("input",ev=>{

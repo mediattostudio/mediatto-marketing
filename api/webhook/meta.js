@@ -1,4 +1,4 @@
-import { validSignature, handleComment } from "../../lib/automations.js";
+import { validSignature, handleComment, logHook } from "../../lib/automations.js";
 
 // Meta manda aquí los comentarios nuevos (Instagram y página de Facebook)
 async function rawBody(req) {
@@ -32,6 +32,7 @@ export default async function handler(req, res) {
   for (const entry of body.entry || []) {
     for (const ch of entry.changes || []) {
       const v = ch.value || {};
+      if (ch.field !== "leadgen") jobs.push(logHook(body.object, ch.field + (v.item ? `:${v.item}` : "")));
       if (body.object === "instagram" && ch.field === "comments" && v.id && v.media?.id) {
         jobs.push(handleComment({ provider: "ig", commentId: v.id, mediaId: v.media.id, text: v.text, fromId: v.from?.id, fromName: v.from?.username }));
       }
