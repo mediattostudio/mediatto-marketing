@@ -985,12 +985,16 @@ function vAuto(){
     return `<div class="arow ${S.autoSel===i.id?"sel":""}" data-autosel="${i.id}"><span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="t">${esc(i.title||"Sin título")}</span><span class="ktag">${esc(i.keyword||"—")}</span></span><span class="num">${num(metricsOf(i).views||0)}</span><span class="num">${s2.comments}</span><span class="num">${s2.sent}</span><span class="num">${s2.clicks}</span><label class="swl sm" title="${on?"Pausar":"Activar"}"><input type="checkbox" data-autotoggle="${i.id}" ${on?"checked":""}><span></span></label></div>`}).join("");
   const health=!lastHook?`<div class="hookline bad">● Meta todavía no ha mandado ningún aviso a la app. Revisa los webhooks (Instagram → comments, Page → feed) y toca “Reconectar avisos de Meta”.</div>`
     :`<div class="hookline ok">● Último aviso de Meta: ${ago2(lastHook.created_at)} (${esc(lastHook.text)})</div>`;
+  const lastMsg=hooks.find(x=>/messag/.test(x.text||""));
+  const anyGuide=autos.some(i=>i.automation?.file&&i.automation.fileMode!=="link");
+  const msgLine=!anyGuide?"":lastMsg?`<div class="hookline ok">● Último mensaje recibido: ${ago2(lastMsg.created_at)} — ${esc((lastMsg.text||"").replace(/^\w+\/messages · /,""))}</div>`
+    :`<div class="hookline bad">● Meta no ha mandado ningún mensaje a la app, así que no puede entregar la guía. En Webhooks activa <b>messages</b> y <b>messaging_postbacks</b> en Instagram y en Page, y toca “Reconectar avisos de Meta”.</div>`;
   return `${banner()}<div class="autogrid">
    <div class="autoleft">${sel?autoPanel(sel,evs.filter(x=>x.item_id===sel.id)):`<div class="panel"><div class="empty">Abre una pieza publicada, ponle keyword y vincúlala para crear tu primera automatización.</div></div>`}</div>
    <div class="autoright">
     <div class="head" style="margin-bottom:0"><div><div class="eyebrow">Instagram · Facebook</div><h1>Automatizaciones <em>en vivo</em></h1></div>
      <div class="tools"><button class="btn" data-autore>↻ Actualizar</button><button class="btn" data-autosub>Reconectar avisos de Meta</button></div></div>
-    ${health}
+    ${health}${msgLine}
     ${S.autoVerify===false?`<div class="banner">Falta <b>META_VERIFY_TOKEN</b> en Vercel.</div>`:""}
     <div class="kpis"><div class="kpi"><div class="v">${st.comments}</div><div class="s">comentarios con keyword · 30 d</div></div>
      <div class="kpi"><div class="v">${st.sent}</div><div class="s">DMs enviados${st.errors?` · ${st.errors} con error`:""}</div></div>

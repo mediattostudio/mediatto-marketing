@@ -32,8 +32,10 @@ export default async function handler(req, res) {
   for (const entry of body.entry || []) {
     for (const m of entry.messaging || []) {
       const provider = body.object === "instagram" ? "ig" : "fb";
-      jobs.push(logHook(body.object, m.postback ? "messaging_postbacks" : "messages"));
-      jobs.push(handleMessage({ provider, senderId: m.sender?.id, text: m.message?.text, payload: m.message?.quick_reply?.payload || m.postback?.payload, isEcho: !!m.message?.is_echo }));
+      if (m.message?.is_echo || m.read || m.delivery) continue;
+      jobs.push(handleMessage({ provider, senderId: m.sender?.id, text: m.message?.text, payload: m.message?.quick_reply?.payload || m.postback?.payload, isEcho: false })
+        .then((r) => logHook(body.object, `messages · ${r.delivered ? "guía entregada (" + r.delivered + ")" : r.error ? "error: " + r.error : r.skip}`))
+        .catch((e) => logHook(body.object, `messages · error: ${e.message}`)));
     }
     for (const ch of entry.changes || []) {
       const v = ch.value || {};
